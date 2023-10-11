@@ -36,11 +36,11 @@
 #define SQR(x)      ((x)*(x))
 // Global Variables
 static int sq, lq, ld, task_size;
-static long long int *M;
-static double *Ixx, *Iyy, *Izz, *Ixy, *Ixz, *Iyz;
-static double *L1, *L2, *L3;
-static double *I, *V1x, *V1y, *V1z, *V2x, *V2y, *V2z, *V3x, *V3y, *V3z;
-static unsigned char *F;
+//static long long int *M;
+//static double *Ixx, *Iyy, *Izz, *Ixy, *Ixz, *Iyz;
+//static double *L1, *L2, *L3;
+//static double *I, *V1x, *V1y, *V1z, *V2x, *V2y, *V2z, *V3x, *V3y, *V3z;
+//static unsigned char *F;
 static pthread_mutex_t mutex;
 
 // Global functions
@@ -70,7 +70,7 @@ typedef struct{
 	unsigned int* dim;
 
     //Output
-	unsigned char* F ;
+	unsigned int* F ;
     }Tomos;
 static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 {	//Inputs
@@ -87,138 +87,142 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 
 
 	//Auxiliar variables
-	int i, nta, nth, type, num_threads;
+	int i, nta, nth, num_threads;
+	//int type;
 	int m, mh;
 	npy_intp mn, mhn;
-	size_t len, len64;
+	//size_t len, len64;
 	long long int dat64;
 	pthread_t* threads;
+	//int sq, lq, ld, task_size;
+	//pthread_mutex_t mutex;
+
+	unsigned int* F ;
 	
-	
-    printf("Declara bien");
+
 
 	
 	if (!PyArg_ParseTuple(args,"OOOOOOOOO",&I_array,&V1x_array,&V1y_array,&V1z_array,&V2x_array,&V2y_array,&V2z_array,&M_array,&dim_array)){
-	    printf("ERROR: nonmaxsup: Unable to load inputs.");
-	    PyErr_SetString(PyExc_TypeError, "Unable to load inputs");
+	    printf("ERROR: nonmaxsup: Unable to load inputs.\n");
+	    PyErr_SetString(PyExc_TypeError, "Unable to load inputs.\n");
 		return NULL;}
-    printf("Coge inputs");
+
 	//Transform to NumPy matrix
 	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (I_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform I in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform I in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("I como matriz bien");
+
 	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V1x_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform V1x in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform V1x in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("V1x como matriz bien");
+
 	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V1y_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform V1y in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform V1y in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("V1y como matriz bien");
+
 	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V1z_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform V1z in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform V1z in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("V1z como matriz bien");
+
 	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V2x_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming V2x in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform V2x in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming V2x in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform V2x in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("V2x como matriz bien");
+
 	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming V2y in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform V2y in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming V2y in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform V2y in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("V2y como matriz bien");
+
 	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming V2z in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform V2z in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming V2z in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform V2z in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("V2z como matriz bien");
+
 	PyArrayObject* M_np_array = (PyArrayObject*)PyArray_FROM_OTF(M_array, NPY_INT64, NPY_ARRAY_IN_ARRAY);
 	if (M_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming M in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform M in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming M in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform M in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("M como matriz bien");
+
 	PyArrayObject* dim_np_array = (PyArrayObject*)PyArray_FROM_OTF(dim_array, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
 	if (dim_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming dim in a NumPy matrix");
-        printf("ERROR: nonmaxsup: Unable to transform dim in a NumPy Matrix.");
+        PyErr_SetString(PyExc_TypeError, "Error transforming dim in a NumPy matrix.\n");
+        printf("ERROR: nonmaxsup: Unable to transform dim in a NumPy Matrix.\n");
         return NULL;
     }
-    printf("dim como matriz bien");
+
 
     //Checking dimensions
 
     mn= PyArray_DIMS(I_np_array)[0];
     m=(int)mn;
-    printf("dims I bien");
+
     if (PyArray_DIMS(V1x_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.");
+        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
+		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
 		return NULL;
 
     }
-    printf("dims V1x bien");
+
     if (PyArray_DIMS(V1y_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.");
+        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
+		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
 		return NULL;
     }
-    printf("dims V1y bien");
-    if (PyArray_DIMS(V1z_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.");
-		return NULL;
-    }
-    printf("dims V1z bien");
-    if (PyArray_DIMS(V2x_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.");
-		return NULL;
-    }
-    printf("dims V2x bien");
-    if (PyArray_DIMS(V2y_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.");
-		return NULL;
-    }
-    printf("dims V2y bien");
-    if (PyArray_DIMS(V2z_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.");
-		return NULL;
-    }
-    printf("dims V2z bien");
 
-    mhn=PyArray_DIMS(M_np_array)[1];
+    if (PyArray_DIMS(V1z_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
+		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V2x_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
+		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V2y_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
+		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V2z_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
+		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+
+    mhn=PyArray_DIMS(M_np_array)[0];
     mh=(int)mhn;
 	if (mh>m){
-		PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Mask dimensions mismatch.");
-		printf("ERROR: nonmaxsup: Mask dimensions mismatch.");
+		PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Mask dimensions mismatch.\n");
+		printf("ERROR: nonmaxsup: Mask dimensions mismatch.\n");
 		return NULL;
 	}
-	printf("dims M bien");
+
 
 
 
@@ -232,36 +236,37 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 	double* V2z=(double*)PyArray_DATA(V2z_np_array);
 	long long int* M=(long long int*)PyArray_DATA(M_np_array);
 	unsigned int* dim=(unsigned int*)PyArray_DATA(dim_np_array);
-    printf("Inputs salvados como c");
+
 	//Free memory
 	Py_XDECREF(I_np_array); Py_XDECREF(V1x_np_array); Py_XDECREF(V1y_np_array); Py_XDECREF(V1z_np_array);
 	Py_XDECREF(V2x_np_array); Py_XDECREF(V2y_np_array); Py_XDECREF(V2z_np_array); Py_XDECREF(M_np_array);
 	Py_XDECREF(dim_np_array);
-    printf("memoria liberada");
+
 	// Get computer information to set the number of thread and the size of buffers
 	num_threads = (int)sysconf(_SC_NPROCESSORS_ONLN);
 	if (num_threads<1) {
-		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: No active cpu detected.");
-		printf("ERROR: nonmaxsup: No active cpu detected.");
+		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: No active cpu detected.\n");
+		printf("ERROR: nonmaxsup: No active cpu detected.\n");
 		return NULL;
 	}
-	printf("numero de threads calculado");
+
+	//num_threads=1;
 	dat64 = get_cache_size();
 	if (dat64<1) {
-		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: No Cache detected.");
-		printf("ERROR: nonmaxsup: No Cache detected.");
+		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: No Cache detected.\n");
+		printf("ERROR: nonmaxsup: No Cache detected.\n");
 		return NULL;
 	}
 	task_size = ceil( (CACHE_USED*dat64) / 18 );
-	printf("task size calculado");
+
 	
 	
 	ld = mh;
-	printf ("ld fijado");
+
 	// Create the array for holding the output result
 
-	F= (unsigned char*)malloc(m*sizeof(unsigned char));
-    printf("F allocated");
+	F= (unsigned int*)malloc(m*sizeof(unsigned int));
+
     Tomos tomo;
     tomo.I=I;
     tomo.V1x=V1x;
@@ -274,9 +279,7 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
     tomo.dim=dim;
 
     tomo.F=F;
-    printf("struct created");
 
-	
 	// Assign pointers to data
 	
 	
@@ -287,47 +290,47 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 	if (nta<nth) {
 		nth = nta;
 	}
-	printf("pointers created");
+
 	// Throw the workers
 	lq = m;
 	sq = 0; // Task queue initialization
 	if (pthread_mutex_init( &mutex, NULL ) ){
-		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error creating the mutex.");
-		printf("ERROR: nonmaxsup: Unable to create the mutex.");
+		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error creating the mutex.\n");
+		printf("ERROR: nonmaxsup: Unable to create the mutex.\n");
 		return NULL;
 	}
-	printf("Mutex fijado");
+
 	threads = (pthread_t*)malloc( nth*sizeof(pthread_t) );
 	for (i=0; i<nth; i++) {
 		// Update process queue pointers
 		if (pthread_create(&threads[i],NULL,&look_neigbourhood,&tomo)) {
-			PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error creating a thread.");
-			printf("ERROR: nonmaxsup: Unable to create a thread.");
+			PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error creating a thread.\n");
+			printf("ERROR: nonmaxsup: Unable to create a thread.\n");
 			return NULL;
 		}
 	}
-	printf("funcion hecha");
+
 	
 	// Wait for all workers
 	for (i=0; i<nth; i++) {
 		if (pthread_join(threads[i],NULL)) {
-			PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error waiting the thread termination.");
-			printf("ERROR: nonmaxsup: Fail waiting the thread termination.");
+			PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error waiting the thread termination.\n");
+			printf("ERROR: nonmaxsup: Fail waiting the thread termination.\n");
 			return NULL;
 		}
 	}
-    printf("terminan los hilos");
+
 	//Creating numpy matrix from C
-	PyObject* F_array = PyArray_SimpleNewFromData(1, &mn, NPY_UINT8, tomo.F);
+	PyObject* F_array = PyArray_SimpleNewFromData(1, &mn, NPY_UINT32, tomo.F);
 	if (F_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix F");
-        printf("ERROR: nonmaxsup: Fail to create NumPy Matrix F.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix F.\n");
+        printf("ERROR: nonmaxsup: Fail to create NumPy Matrix F.\n");
         return NULL;
     }
 	PyArray_ENABLEFLAGS((PyArrayObject*)F_array, NPY_ARRAY_OWNDATA);
-	printf("F como array");
+
 	return F_array;
-	printf("proceso hecho");
+
 }
 typedef struct{
 	    //Inputs
@@ -354,7 +357,7 @@ typedef struct{
         } Images;
 
 static PyObject * supression_desyevv(PyObject *self, PyObject *args)
-{   printf("desyevv function\n");
+{
     //Inputs
     PyObject* Ixx_array;//double
     PyObject* Iyy_array;//double
@@ -365,117 +368,118 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
     //double *Ixx, *Iyy, *Izz, *Ixy, *Ixz, *Iyz;
 
     //Auxiliar variables
-	int i, nta, nth, type, num_threads;
+	int nta, nth, num_threads;
+	//int i, type;
 	int m;
 	npy_intp mh;
-	size_t len, len64;
+	//size_t len, len64;
 	long long int dat64;
 	pthread_t* threads;
+	//int sq, lq, ld, task_size;
+	//pthread_mutex_t mutex;
 
 	//Structura con datos de input e input
+    double *L1, *L2, *L3;
+    double *V1x, *V1y, *V1z, *V2x, *V2y, *V2z, *V3x, *V3y, *V3z;
 
 
-    printf("Tras declarar Aqui va\n");
     if (!PyArg_ParseTuple(args, "OOOOOO", &Ixx_array, &Iyy_array, &Izz_array, &Ixy_array, &Ixz_array, &Iyz_array)){
-        printf("ERROR: desyevv: Unable to load inputs");
-        PyErr_SetString(PyExc_TypeError, "Unable to load inputs");
+        printf("ERROR: desyevv: Unable to load inputs.\n");
+        PyErr_SetString(PyExc_TypeError, "Unable to load inputs.\n");
 
         return NULL;
     }
-    printf("Tras cargar inputs Aqui va\n");
+
     //Transform to NumPy matrix
 	PyArrayObject* Ixx_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixx_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (Ixx_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming Ixx in a NumPy matrix");
-        printf("ERROR: desyevv: Unable transforming Ixx in a NumPy matrix");
+        PyErr_SetString(PyExc_TypeError, "Error transforming Ixx in a NumPy matrix.\n");
+        printf("ERROR: desyevv: Unable transforming Ixx in a NumPy matrix.\n");
         return NULL;
     }
-    printf("Pasar Ixx a numpy Aqui va\n");
+
     PyArrayObject* Iyy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyy_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (Ixx_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming Iyy in a NumPy matrix");
-        printf("ERROR: desyevv Unable transforming Iyy in a NumPy matrix");
+        PyErr_SetString(PyExc_TypeError, "Error transforming Iyy in a NumPy matrix.\n");
+        printf("ERROR: desyevv Unable transforming Iyy in a NumPy matrix.\n");
         return NULL;
     }
-    printf("Pasar Iyy a numpy Aqui va\n");
+
     PyArrayObject* Izz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Izz_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (Izz_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming Izz in a NumPy matrix");
-        printf("ERROR: desyevv: Unable transforming Izz in a NumPy matrix");
+        PyErr_SetString(PyExc_TypeError, "Error transforming Izz in a NumPy matrix.\n");
+        printf("ERROR: desyevv: Unable transforming Izz in a NumPy matrix.\n");
         return NULL;
     }
-    printf("Pasar Izz a numpy Aqui va\n");
+
     PyArrayObject* Ixy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixy_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (Ixy_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming Ixy in a NumPy matrix");
-        printf("ERROR: desyevv: Unable transforming Ixy in a NumPy matrix");
+        PyErr_SetString(PyExc_TypeError, "Error transforming Ixy in a NumPy matrix.\n");
+        printf("ERROR: desyevv: Unable transforming Ixy in a NumPy matrix.\n");
         return NULL;
     }
-    printf("Pasar Ixy a numpy Aqui va\n");
+
     PyArrayObject* Ixz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixz_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (Ixz_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming Ixz in a NumPy matrix");
-        printf("ERROR: desyevv: Unable transforming Ixz in a NumPy matrix");
+        PyErr_SetString(PyExc_TypeError, "Error transforming Ixz in a NumPy matrix.\n");
+        printf("ERROR: desyevv: Unable transforming Ixz in a NumPy matrix.\n");
         return NULL;
     }
-    printf("Pasar Ixz a numpy Aqui va\n");
+
     PyArrayObject* Iyz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyz_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (Iyz_np_array == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Error transforming Iyz in a NumPy matrix");
-        printf("ERROR: desyevv: Unable transforming Iyz in a NumPy matrix");
+        PyErr_SetString(PyExc_TypeError, "Error transforming Iyz in a NumPy matrix.\n");
+        printf("ERROR: desyevv: Unable transforming Iyz in a NumPy matrix.\n");
         return NULL;
     }
-    printf("Pasar Iyz a numpy Aqui va\n");
+
 
 
     mh=PyArray_DIMS(Ixx_np_array)[0];
     m=(int)mh;
 
-    printf ("Dim Ixx bien\n");
+
     if (PyArray_DIMS(Iyy_np_array)[0]!=m){
-	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.");
-		printf("ERROR: desyevv: Dimensions mismatch");
+	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.\n");
+		printf("ERROR: desyevv: Dimensions mismatch.\n");
 		return NULL;
 	}
-	printf ("Dim Iyy bien\n");
+
 	if (PyArray_DIMS(Izz_np_array)[0]!=m){
-	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.");
-		printf("ERROR: desyevv: Dimensions mismatch");
+	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.\n");
+		printf("ERROR: desyevv: Dimensions mismatch.\n");
 		return NULL;
 	}
-	printf ("Dim Izz bien\n");
+
 	if (PyArray_DIMS(Ixy_np_array)[0]!=m){
-	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.");
-		printf("ERROR: desyevv: Dimensions mismatch");
+	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.\n");
+		printf("ERROR: desyevv: Dimensions mismatch.\n");
 		return NULL;
 	}
-	printf ("Dim Ixy bien\n");
+
 	if (PyArray_DIMS(Ixz_np_array)[0]!=m){
-	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.");
-		printf("ERROR: desyevv: Dimensions mismatch");
+	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.\n");
+		printf("ERROR: desyevv: Dimensions mismatch.\n");
 		return NULL;
 	}
-	printf ("Dim Ixz bien\n");
+
 	if (PyArray_DIMS(Iyz_np_array)[0]!=m){
-	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.");
-		printf("ERROR: desyevv: Dimensions mismatch");
+	    PyErr_SetString(PyExc_ValueError,"desyevvmex.c: Dimensions mismatch.\n");
+		printf("ERROR: desyevv: Dimensions mismatch.\n");
 		return NULL;
 	}
-	printf ("Dim Iyz bien\n");
-	printf("%d",m);
-	printf("\n");
 
 
-	ld=m;
-    printf("tras ver dimensiones Aqui va\n");
+
+	ld=mh;
+
     double* Ixx =(double*)PyArray_DATA(Ixx_np_array);
     double* Iyy =(double*)PyArray_DATA(Iyy_np_array);
     double* Izz =(double*)PyArray_DATA(Izz_np_array);
     double* Ixy =(double*)PyArray_DATA(Ixy_np_array);
     double* Ixz =(double*)PyArray_DATA(Ixz_np_array);
     double* Iyz =(double*)PyArray_DATA(Iyz_np_array);
-    printf("Tras pasar los inputs a c arrays Aqui va\n");
-    printf("%f\n",Ixx[0]);
+
 
 
 
@@ -483,26 +487,26 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
     //Free memory
 	Py_XDECREF(Ixx_np_array); Py_XDECREF(Iyy_np_array); Py_XDECREF(Izz_np_array);
 	Py_XDECREF(Ixy_np_array); Py_XDECREF(Ixz_np_array); Py_XDECREF(Iyz_np_array);
-	printf("Tras liberar memoria Aqui va\n");
+
 
 
     // Get computer information to set the number of thread and the size of buffers
 	num_threads = (int)sysconf(_SC_NPROCESSORS_ONLN);
 	if (num_threads<1) {
-		PyErr_SetString(PyExc_RuntimeError,"desyevvmex.c: No active cpu detected.");
-		printf("ERROR: line desyevv: No active cpu detected.");
+		PyErr_SetString(PyExc_RuntimeError,"desyevvmex.c: No active cpu detected.\n");
+		printf("ERROR: line desyevv: No active cpu detected.\n");
 		return NULL;
 	}
-	printf("Tras crear hilos Aqui va\n");
+
     //num_threads=1;
 	dat64 = get_cache_size();
 	if (dat64<1) {
-		PyErr_SetString(PyExc_RuntimeError,"desyevvmex.c: No Cache L2 detected.");
-		printf("ERROR: line desyevv: No Cache L2 detected.");
+		PyErr_SetString(PyExc_RuntimeError,"desyevvmex.c: No Cache L2 detected.\n");
+		printf("ERROR: line desyevv: No Cache L2 detected.\n");
 		return NULL;
 	}
 	task_size = ceil( (CACHE_USED*dat64) / 18 );
-    printf("Tras calcular cache Aqui va\n");
+
 	//Create output c matrix
 
 	L1=(double*)malloc(m*sizeof(double));
@@ -517,7 +521,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	V3x=(double*)malloc(m*sizeof(double));
 	V3y=(double*)malloc(m*sizeof(double));
 	V3z=(double*)malloc(m*sizeof(double));
-    printf("preimages Aqui va\n");
+
     Images image;
     image.Ixx=Ixx;
     image.Iyy=Iyy;
@@ -538,7 +542,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
     image.V3y=V3y;
     image.V3z=V3z;
     //double* images[18] = {Ixx,Iyy,Izz,Ixy,Ixz,Iyz,L1,L2,L3,V1x,V1y,V1z,V2x,V2y,V2z,V3x,V3y,V3z};
-    printf("images Aqui va\n");
+
 	// Set pointer for initial splitting
 	nta = (float)m / task_size;
 	nta = ceil( nta );
@@ -551,7 +555,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	lq = m;
 	sq = 0; // Task queue initialization
 	if (pthread_mutex_init( &mutex, NULL ) ){
-		PyErr_SetString(PyExc_RuntimeError,"desyevvmex.cpp: Error creating the mutex.");
+		PyErr_SetString(PyExc_RuntimeError,"desyevvmex.cpp: Error creating the mutex.\n");
 		printf("ERROR: desyevv: Unable to create the mutex.\n");
 		return NULL;
 	}
@@ -559,155 +563,154 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	threads = (pthread_t*)malloc( nth*sizeof(pthread_t) );
 	for (int i=0; i<nth; i++) {
 		// Update process queue pointers
-		printf("Antes llamadaAqui va\n");
+
 		if (pthread_create(&threads[i],NULL,&desyevv3stub,&image)) {
-			PyErr_SetString(PyExc_RuntimeError,"desyevvmex.cpp: Error creating a thread.");
-			printf("ERROR: desyevv: Unable to create a thread.");
+			PyErr_SetString(PyExc_RuntimeError,"desyevvmex.cpp: Error creating a thread.\n");
+			printf("ERROR: desyevv: Unable to create a thread.\n");
 			return NULL;
 		}
 	}
-        printf("despues llamada Aqui va\n");
+
 	// Wait for all workers
 	for (int i=0; i<nth; i++) {
 		if (pthread_join(threads[i],NULL)) {
-			PyErr_SetString(PyExc_RuntimeError,"desyevvmex.cpp: Error waiting the thread termination.");
-			printf("ERROR: desyevv: Failure waiting the thread termination.");
+			PyErr_SetString(PyExc_RuntimeError,"desyevvmex.cpp: Error waiting the thread termination.\n");
+			printf("ERROR: desyevv: Failure waiting the thread termination.\n");
 			return NULL;
 		}
 	}
-	    printf("Termina el thread Aqui va\n");
+
 
 
 	//Desempaqueto la estructura
 
-    printf ("L1: %f\n",image.L1[m-1]);
+
 	//Save outputs as a mumpy array
 	PyObject* L1_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.L1);
-	printf("L1 guardado como array\n");
+
 
 	if (L1_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L1");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix L1.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L1.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix L1.\n");
         return NULL;
     }
-    printf("L1 Pasa el error\n");
+
 
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)L1_array, NPY_ARRAY_OWNDATA);
-    printf("L1 como array Aqui va\n");
+
 
 	PyObject* L2_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.L2);
 	if (L2_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L2");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix L2.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L2.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix L2.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)L2_array, NPY_ARRAY_OWNDATA);
-    printf("L2 como array Aqui va\n");
+
 	PyObject* L3_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.L3);
 	if (L3_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L3");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix L3.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L3.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix L3.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)L3_array, NPY_ARRAY_OWNDATA);
-    printf("L3 como array Aqui va\n");
+
 
 	PyObject* V1x_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V1x);
 	if (V1x_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1x");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V1x.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1x.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V1x.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1x_array, NPY_ARRAY_OWNDATA);
-    printf("V1x como array Aqui va\n");
+
 
 	PyObject* V1y_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V1y);
 	if (V1y_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1y");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V1y.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1y.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V1y.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1y_array, NPY_ARRAY_OWNDATA);
-    printf("V1y como array Aqui va\n");
 
 	PyObject* V1z_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V1z);
 	if (V1z_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1z");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V1z.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1z.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V1z.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1z_array, NPY_ARRAY_OWNDATA);
-    printf("V1z como array Aqui va\n");
+
 
 	PyObject* V2x_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V2x);
 	if (V2x_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2x");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V2x.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2x.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V2x.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2x_array, NPY_ARRAY_OWNDATA);
-    printf("V2x como array Aqui va\n");
+
 
 	PyObject* V2y_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V2y);
 	if (V2y_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2y");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V2y.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2y.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V2y.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2y_array, NPY_ARRAY_OWNDATA);
-    printf("V2y como array Aqui va\n");
+
 
 	PyObject* V2z_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V2z);
 	if (V2z_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2z");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V2z.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2z.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V2z.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2z_array, NPY_ARRAY_OWNDATA);
-    printf("V2z como array Aqui va\n");
+
 
 	PyObject* V3x_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V3x);
 	if (V3x_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3x");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V3x.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3x.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V3x.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V3x_array, NPY_ARRAY_OWNDATA);
-    printf("V3x como array Aqui va\n");
+
 
 	PyObject* V3y_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V3y);
 	if (V3y_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3y");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V3i.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3y.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V3i.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V3y_array, NPY_ARRAY_OWNDATA);
-    printf("V3y como array Aqui va\n");
+
 
 	PyObject* V3z_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V3z);
 	if (V3z_array == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3z");
-        printf("ERROR: desyevv: Fail to create NumPy Matrix V3z.");
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3z.\n");
+        printf("ERROR: desyevv: Fail to create NumPy Matrix V3z.\n");
         return NULL;
     }
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V3z_array, NPY_ARRAY_OWNDATA);
-    printf("V3z como array Aqui va\n");
+
 
 	PyObject *result = PyTuple_Pack(12, L1_array, L2_array, L3_array, V1x_array, V1y_array, V1z_array,
 	    V2x_array, V2y_array, V2z_array, V3x_array, V3y_array, V3z_array);
-    printf("Empaqueta el resultado\n");
+
 	return result;
 }
 
@@ -756,7 +759,7 @@ static void* desyevv3stub( void* ptr ){
     double* Iyz = image->Iyz;
 
 
-    printf("Estoy en la funcion\n");
+
 	do{
 		// Update pointers
 		pthread_mutex_lock( &mutex );
@@ -831,7 +834,7 @@ static void* desyevv3stub( void* ptr ){
             //printf("index %d \n",i);
 		}
 	}while(lock);
-	printf("Hace la funcion\n");
+
 }
 
 // ----------------------------------------------------------------------------
@@ -1135,10 +1138,10 @@ static void* look_neigbourhood( void* ptr ){
 	unsigned int* dim;
 
     //Output
-	unsigned char* F ;
+	unsigned int* F ;
     }Tomos;
 	
-	unsigned long long int i, j, k;
+	int i, j, k;
 	unsigned int mx, my ;
 	//unsigned int *dim;
 	int sz, start, end;
@@ -1167,7 +1170,7 @@ static void* look_neigbourhood( void* ptr ){
 	unsigned int* dim = tomo->dim;
 	mx = dim[0];
 	my = dim[1];
-	
+
 	// Buffers initialization
 	sz = task_size * sizeof(double);
 	for (i=0; i<8; i++) {
@@ -1203,11 +1206,27 @@ static void* look_neigbourhood( void* ptr ){
 		// Prepare data for every coordinate
 		j = 0;
 		for (k=start; k<end; k++) {
-			i = M[k];			
+
+			i = M[k];
+			//printf("k=%d, i=%d, j=%d\n",k,i,j);
+
+
+
 			lv1 = I[i];
+			//printf("I[%d] vale %f\n",i,I[i]);
+			//printf("lv1 vale %f\n",lv1);
+
 			K1[0][j] = fabs( V1x[i] * INTER_FACTOR );
 			K1[1][j] = fabs( V1y[i] * INTER_FACTOR );
 			K1[2][j] = fabs( V1z[i] * INTER_FACTOR );
+
+			//printf("V1x[0] vale %f\n",V1x[0]);
+	        //printf("V1y[0] vale %f\n",V1y[0]);
+	        //printf("V1z[0] vale %f\n",V1z[0]);
+	        //printf("K1[0][j] vale %f\n",K1[0][j]);
+	        //printf("K1[1][j] vale %f\n",K1[1][j]);
+	        //printf("K1[2][j] vale %f\n",K1[2][j]);
+
 			A1[0][j] = lv1;
 			B1[0][j] = lv1;
 			if (V1x[i]>=0) {
@@ -1323,8 +1342,8 @@ static void* look_neigbourhood( void* ptr ){
 					B1[7][j] = I[i+mx*(my+1)+1];
 				}
 			}				
-			j++;
-		}
+
+		j++;}
 		
 		// Trilinear interpolation
 		for (j=0; j<(end-start); j++) {
@@ -1338,7 +1357,8 @@ static void* look_neigbourhood( void* ptr ){
 			hold1 = hold1 + A1[5][j]*k1x*(1-k1y)*k1z;
 			hold1 = hold1 + A1[3][j]*(1-k1x)*k1y*k1z;
 			hold1 = hold1 + A1[6][j]*k1x*k1y*(1-k1z);
-			V1a[j] = hold1 + A1[7][j]*k1x*k1y*k1z;			
+			V1a[j] = hold1 + A1[7][j]*k1x*k1y*k1z;
+			//printf("V1a[j]=%f\n",V1a[j]);
 		}
 		for (j=0; j<(end-start); j++) {
 			k1x = K1[0][j];
@@ -1351,14 +1371,17 @@ static void* look_neigbourhood( void* ptr ){
 			hold1 = hold1 + B1[5][j]*k1x*(1-k1y)*k1z;		
 			hold1 = hold1 + B1[3][j]*(1-k1x)*k1y*k1z;		
 			hold1 = hold1 + B1[6][j]*k1x*k1y*(1-k1z);		
-			V1b[j] = hold1 + B1[7][j]*k1x*k1y*k1z;	
+			V1b[j] = hold1 + B1[7][j]*k1x*k1y*k1z;
+
+			//printf("V1b[j]=%f\n",V1b[j]);
 		}
 		
 		
 			// Prepare data for every coordinate
 		j = 0;
 		for (k=start; k<end; k++) {
-			i = M[k];			
+			i = M[k];
+
 			lv2 = I[i];
 			K2[0][j] = fabs( V2x[i] * INTER_FACTOR );
 			K2[1][j] = fabs( V2y[i] * INTER_FACTOR );
@@ -1478,8 +1501,8 @@ static void* look_neigbourhood( void* ptr ){
 					B2[7][j] = I[i+mx*(my+1)+1];
 				}
 			}				
-			j++;
-		}
+
+		j++;}
 		
 		// Trilinear interpolation
 		for (j=0; j<(end-start); j++) {
@@ -1513,12 +1536,15 @@ static void* look_neigbourhood( void* ptr ){
 		j = 0;
 		for (k=start; k<end; k++) {
 			i = M[k];
+
 			lv1 = I[i];
 			if ( (lv1>V1a[j]) && (lv1>V1b[j]) && (lv1>V2a[j]) && (lv1>V2b[j]) ) {
-				tomo->F[i] = 0x01;
+
+				tomo->F[i] = 1;
+
 			}			
-			j++;
-		}
+
+		j++;}
 		
 	}while(lock);
 	

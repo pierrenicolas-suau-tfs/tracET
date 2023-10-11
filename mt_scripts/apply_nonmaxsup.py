@@ -1,10 +1,52 @@
-from numpy import ndarray
+
 from supression import nonmaxsup,desyevv
-import ctypes
+
 import sys, getopt, time
 from graph_uts import *
 from mt import lio
-from scipy.ndimage import gaussian_filter
+
+
+def angauss(I,s,r=1):
+    """
+
+    :param I:
+    :param s:
+    :param r:
+    :return:
+    """
+    #Initialitation
+    [Nx, Ny, Nz] = np.shape(I)
+    if np.remainder(Nx,2)==1:
+        Nx2=np.floor(0.5*Nx)
+        Vnx=np.arange(-Nx2,Nx2+1)
+    else:
+        Nx2=0.5*Nx
+        Vnx=-np.arange(-Nx2,Nx2)
+    if np.remainder(Ny,2)==1:
+        Ny2=np.floor(0.5*Ny)
+        Vny=np.arange(-Ny2,Ny2+1)
+    else:
+        Ny2=0.5*Ny
+        Vny=-np.arange(-Ny2,Ny2)
+    if np.remainder(Nz,2)==1:
+        Nz2=np.floor(0.5*Nz)
+        Vnz=np.arange(-Nz2,Nz2+1)
+    else:
+        Nz2=0.5*Nz
+        Vnz=-np.arange(-Nz2,Nz2)
+
+    [X,Y,Z] = np.meshgrid(Vny,Vnx,Vnz)
+    A = 1./((s*s*np.sqrt(r*(2.*np.pi)**3.)))
+    a = 1./(2.*s*s)
+    b=a/r
+
+    #Kernel
+    K=A*np.exp(-a*(X*X+Y*Y)-b*Z*Z)
+
+    #Convolution
+    F=np.fft.fftshift(np.fft.ifftn(np.fft.fftn(I)*np.fft.fftn(K)))
+
+    return F
 
 def diff3d(T,k):
     """
@@ -56,41 +98,40 @@ def eig3dk(Ixx,Iyy,Izz,Ixy,Ixz,Iyz):
 
     """
     [Nx,Ny,Nz] = np.shape(Ixx)
-    Ixx = Ixx.flatten()
+    Ixx = np.swapaxes(Ixx,0,2).flatten()
 
-    print(np.shape(Ixx))
-    print(Ixx[0])
-    Iyy = Iyy.flatten()
-    print(np.shape(Iyy))
-    Izz = Izz.flatten()
-    print(np.shape(Izz))
-    Ixy = Ixy.flatten()
-    print(np.shape(Ixy))
-    Ixz = Ixz.flatten()
-    print(np.shape(Ixz))
-    Iyz = Iyz.flatten()
-    print(np.shape(Iyz))
+
+    Iyy = np.swapaxes(Iyy,0,2).flatten()
+
+    Izz = np.swapaxes(Izz,0,2).flatten()
+
+    Ixy = np.swapaxes(Ixy,0,2).flatten()
+
+    Ixz = np.swapaxes(Ixz,0,2).flatten()
+
+    Iyz = np.swapaxes(Iyz,0,2).flatten()
+
     result= desyevv(Ixx,Iyy,Izz,Ixy,Ixz,Iyz)
     L1, L2, L3, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z = result
-    print(L1)
 
-    L1 = np.reshape(L1, (Nx, Ny, Nz))
 
-    L2 = np.reshape(L2, (Nx, Ny, Nz))
-    L3 = np.reshape(L3, (Nx, Ny, Nz))
+    L1 = np.swapaxes(np.reshape(L1, (Nz, Ny, Nx)),0,2)
 
-    V1x = np.reshape(V1x, (Nx, Ny, Nz))
-    V1y = np.reshape(V1y, (Nx, Ny, Nz))
-    V1z = np.reshape(V1z, (Nx, Ny, Nz))
+    L2 = np.swapaxes(np.reshape(L2, (Nz, Ny, Nx)),0,2)
+    L3 = np.swapaxes(np.reshape(L3, (Nz, Ny, Nx)),0,2)
 
-    V2x = np.reshape(V2x, (Nx, Ny, Nz))
-    V2y = np.reshape(V2y, (Nx, Ny, Nz))
-    V2z = np.reshape(V2z, (Nx, Ny, Nz))
+    V1x = np.swapaxes(np.reshape(V1x, (Nz, Ny, Nx)),0,2)
+    V1y = np.swapaxes(np.reshape(V1y, (Nz, Ny, Nx)),0,2)
+    V1z = np.swapaxes(np.reshape(V1z, (Nz, Ny, Nx)),0,2)
 
-    V3x = np.reshape(V3x, (Nx, Ny, Nz))
-    V3y = np.reshape(V3y, (Nx, Ny, Nz))
-    V3z = np.reshape(V3z, (Nx, Ny, Nz))
-    print("Resultados guardados")
+    V2x = np.swapaxes(np.reshape(V2x, (Nz, Ny, Nx)), 0, 2)
+    V2y = np.swapaxes(np.reshape(V2y, (Nz, Ny, Nx)), 0, 2)
+    V2z = np.swapaxes(np.reshape(V2z, (Nz, Ny, Nx)), 0, 2)
+
+    V3x = np.swapaxes(np.reshape(V3x, (Nz, Ny, Nx)), 0, 2)
+    V3y = np.swapaxes(np.reshape(V3y, (Nz, Ny, Nx)), 0, 2)
+    V3z = np.swapaxes(np.reshape(V3z, (Nz, Ny, Nx)), 0, 2)
+
     return [L1,L2,L3,V1x,V1y,V1z,V2x,V2y,V2z,V3x,V3y,V3z]
 
 def nonmaxsup_fun (I, M, V1x, V1y, V1z, V2x, V2y, V2z):
@@ -109,34 +150,42 @@ def nonmaxsup_fun (I, M, V1x, V1y, V1z, V2x, V2y, V2z):
     Returns:
 
     """
-    print('Preparamos mascara')
+
     [Nx,Ny,Nz]=np.shape(I)
     H= np.zeros((Nx,Ny,Nz))
     H[1:Nx-2,1:Ny-2,1:Nz-2]=1
     M=M*H
-    del(H)
-    print('Aplanamos vectores')
-    Ir = I.flatten()
-    V1xr = V1x.flatten()
-    V1yr = V1y.flatten()
-    V1zr = V1z.flatten()
-    V2xr = V2x.flatten()
-    V2yr = V2y.flatten()
-    V2zr = V2z.flatten()
-    Mr=M.flatten().astype('int64')
-    dim=np.array([Nx,Ny]).astype('uint32')
-    print('Lazamos funcion')
-    Br=nonmaxsup(Ir,V1xr,V1yr,V1zr,V2xr,V2yr,V2zr,Mr,dim)
-    del (Ir)
-    del (V1xr)
-    del (V1yr)
-    del (V1zr)
-    del (V2xr)
-    del (V2yr)
-    del (V2zr)
-    del (Mr)
+    del H
+    M = np.swapaxes(M,0,2).flatten().astype(int)
+    Mr=np.arange(0,Nx*Ny*Nz,dtype=int)
+    Mr=Mr[M==1]
 
-    B=np.reshape(Br,(Nx,Ny,Nz))
+
+    Ir = np.swapaxes(I,0,2).flatten()
+    V1xr = np.swapaxes(V1x,0,2).flatten()
+    V1yr = np.swapaxes(V1y,0,2).flatten()
+    V1zr = np.swapaxes(V1z,0,2).flatten()
+    V2xr = np.swapaxes(V2x,0,2).flatten()
+    V2yr = np.swapaxes(V2y,0,2).flatten()
+    V2zr = np.swapaxes(V2z,0,2).flatten()
+
+    dim=np.array([Nx,Ny]).astype('uint32')
+
+    Br=nonmaxsup(Ir,V1xr,V1yr,V1zr,V2xr,V2yr,V2zr,Mr,dim)
+    del Ir
+    del V1xr
+    del V1yr
+    del V1zr
+    del V2xr
+    del V2yr
+    del V2zr
+    del Mr
+
+    B=np.swapaxes(np.reshape(Br,(Nz,Ny,Nx)),0,2)
+    H=np.zeros((Nx,Ny,Nz))
+    H[2:Nx-2,2:Ny-2,2:Nz-2]=1
+    B=B*H
+    del H
     return(B)
 
 def main(argv):
@@ -231,7 +280,10 @@ def main(argv):
 
     #Quick smooth
     print('Making the gaussian smooth')
-    T=gaussian_filter(T,s)
+    T=angauss(T,s)
+
+    lio.write_mrc(T.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_gauss_python.mrc')
 
     #Construct tensors:
     print('Calculating Tensors')
@@ -261,41 +313,80 @@ def main(argv):
 
 
     print('Calculating eigenvalues')
-    [L1, L2, L3, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z]=eig3dk(Txx,Tyy,Tzz,Txy,Txz,Tyz)
+    [Lh1, Lh2, Lh3, Vh1x, Vh1y, Vh1z, Vh2x, Vh2y, Vh2z, Vh3x, Vh3y, Vh3z]=eig3dk(Txx,Tyy,Tzz,Txy,Txz,Tyz)
     [Ls1, Ls2, Ls3, Vs1x, Vs1y, Vs1z, Vs2x, Vs2y, Vs2z, Vs3x, Vs3y, Vs3z] = eig3dk(Tsxx, Tsyy, Tszz, Tsxy, Tsxz, Tsyz)
-    lio.write_mrc(L1.astype(np.float32), '/project/chiem/pelayo/neural_network/Ctrl_20220511_368d_tomo06_reg_synth_L1.mrc')
+    if eval == 'Hessian':
+        L1 = -Lh1
+    else:
+        L1 = -Ls1
+    if evec == 'Hessian':
+        V1x = Vh1x
+        V1y = Vh1y
+        V1z = Vh1z
+        V2x = Vh2x
+        V2y = Vh2y
+        V2z = Vh2z
+    else:
+        V1x = Vs1x
+        V1y = Vs1y
+        V1z = Vs1z
+        V2x = Vs2x
+        V2y = Vs2y
+        V2z = Vs2z
 
-
-    del L2
-    del L3
+    del Lh1
+    del Lh2
+    del Lh3
     del Ls1
     del Ls2
     del Ls3
-    del V1x
-    del V1y
-    del V1z
-    del V2x
-    del V2y
-    del V2z
-    del V3x
-    del V3y
-    del V3z
+    del Vh1x
+    del Vh1y
+    del Vh1z
+    del Vh2x
+    del Vh2y
+    del Vh2z
+    del Vh3x
+    del Vh3y
+    del Vh3z
+    del Vs1x
+    del Vs1y
+    del Vs1z
+    del Vs2x
+    del Vs2y
+    del Vs2z
     del Vs3x
     del Vs3y
     del Vs3z
-    print(np.max(L1))
-    L1=-L1
-    print('Calcula M?')
-    M=np.where(L1>f,1,0)
-    print(M)
+
+
+    lio.write_mrc(L1.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_L1_python.mrc')
+    lio.write_mrc(V1x.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V1x_python.mrc')
+    lio.write_mrc(V1y.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V1y_python.mrc')
+    lio.write_mrc(V1z.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V1z_python.mrc')
+    lio.write_mrc(V2x.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V2x_python.mrc')
+    lio.write_mrc(V2y.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V2y_python.mrc')
+    lio.write_mrc(V2z.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V2z_python.mrc')
+
+
+    M=np.zeros_like(L1)
+    M[L1>f] = 1
+    lio.write_mrc(M.astype(np.float32), '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_M_python.mrc')
 
 
     print('Applying the nonmaximal suppresion' )
-    P = nonmaxsup_fun(L1,M,Vs1x,Vs1y,Vs1z,Vs2x,Vs2y,Vs2z)
+    P = nonmaxsup_fun(L1,M,V1x,V1y,V1z,V2x,V2y,V2z)
 
     print('Saving')
     if os.path.splitext(out_tomo)[1] == '.mrc':
-        lio.write_mrc(P,out_tomo)
+        lio.write_mrc(P.astype(np.float32),out_tomo)
     else:
         nrrd.write(out_tomo,P)
 
