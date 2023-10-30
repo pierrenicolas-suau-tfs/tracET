@@ -99,24 +99,27 @@ def eig3dk(Ixx, Iyy, Izz, Ixy, Ixz, Iyz):
     Returns:
 
     """
+
+    # Falttern for C-processing
     [Nx, Ny, Nz] = np.shape(Ixx)
-    Ixx = np.swapaxes(Ixx, 0, 2).flatten()
+    Ixx = np.swapaxes(Ixx.astype(np.float32), 0, 2).flatten()
+    Iyy = np.swapaxes(Iyy.astype(np.float32), 0, 2).flatten()
+    Izz = np.swapaxes(Izz.astype(np.float32), 0, 2).flatten()
+    Ixy = np.swapaxes(Ixy.astype(np.float32), 0, 2).flatten()
+    Ixz = np.swapaxes(Ixz.astype(np.float32), 0, 2).flatten()
+    Iyz = np.swapaxes(Iyz.astype(np.float32), 0, 2).flatten()
 
-    Iyy = np.swapaxes(Iyy, 0, 2).flatten()
+    # C-processing
+    L1, L2, L3, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z = desyevv(Ixx, Iyy, Izz, Ixy, Ixz, Iyz)
+    del Ixx
+    del Iyy
+    del Izz
+    del Ixy
+    del Ixz
+    del Iyz
 
-    Izz = np.swapaxes(Izz, 0, 2).flatten()
-
-    Ixy = np.swapaxes(Ixy, 0, 2).flatten()
-
-    Ixz = np.swapaxes(Ixz, 0, 2).flatten()
-
-    Iyz = np.swapaxes(Iyz, 0, 2).flatten()
-
-    result = desyevv(Ixx, Iyy, Izz, Ixy, Ixz, Iyz)
-    L1, L2, L3, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z = result
-
+    # Rccovering tomogram shape
     L1 = np.swapaxes(np.reshape(L1, (Nz, Ny, Nx)), 0, 2)
-
     L2 = np.swapaxes(np.reshape(L2, (Nz, Ny, Nx)), 0, 2)
     L3 = np.swapaxes(np.reshape(L3, (Nz, Ny, Nx)), 0, 2)
 
@@ -153,10 +156,10 @@ def nonmaxsup_surf(I, M, V1x, V1y, V1z):
     Mr = np.arange(0, Nx * Ny * Nz, dtype=int)
     Mr = Mr[M == 1]
 
-    Ir = np.swapaxes(I, 0, 2).flatten()
-    V1xr = np.swapaxes(V1x, 0, 2).flatten()
-    V1yr = np.swapaxes(V1y, 0, 2).flatten()
-    V1zr = np.swapaxes(V1z, 0, 2).flatten()
+    Ir = np.swapaxes(I.astype(np.float32), 0, 2).flatten()
+    V1xr = np.swapaxes(V1x.astype(np.float32), 0, 2).flatten()
+    V1yr = np.swapaxes(V1y.astype(np.float32), 0, 2).flatten()
+    V1zr = np.swapaxes(V1z.astype(np.float32), 0, 2).flatten()
 
     dim = np.array([Nx, Ny]).astype('uint32')
 
@@ -194,13 +197,13 @@ def nonmaxsup_line(I, M, V1x, V1y, V1z, V2x, V2y, V2z):
     Mr = np.arange(0, Nx * Ny * Nz, dtype=int)
     Mr = Mr[M == 1]
 
-    Ir = np.swapaxes(I, 0, 2).flatten()
-    V1xr = np.swapaxes(V1x, 0, 2).flatten()
-    V1yr = np.swapaxes(V1y, 0, 2).flatten()
-    V1zr = np.swapaxes(V1z, 0, 2).flatten()
-    V2xr = np.swapaxes(V2x, 0, 2).flatten()
-    V2yr = np.swapaxes(V2y, 0, 2).flatten()
-    V2zr = np.swapaxes(V2z, 0, 2).flatten()
+    Ir = np.swapaxes(I.astype(np.float32), 0, 2).flatten()
+    V1xr = np.swapaxes(V1x.astype(np.float32), 0, 2).flatten()
+    V1yr = np.swapaxes(V1y.astype(np.float32), 0, 2).flatten()
+    V1zr = np.swapaxes(V1z.astype(np.float32), 0, 2).flatten()
+    V2xr = np.swapaxes(V2x.astype(np.float32), 0, 2).flatten()
+    V2yr = np.swapaxes(V2y.astype(np.float32), 0, 2).flatten()
+    V2zr = np.swapaxes(V2z.astype(np.float32), 0, 2).flatten()
 
     dim = np.array([Nx, Ny]).astype('uint32')
 
@@ -241,16 +244,16 @@ def nonmaxsup_point(I, M, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z):
     Mr = np.arange(0, Nx * Ny * Nz, dtype=int)
     Mr = Mr[M == 1]
 
-    Ir = np.swapaxes(I, 0, 2).flatten()
-    V1xr = np.swapaxes(V1x, 0, 2).flatten()
-    V1yr = np.swapaxes(V1y, 0, 2).flatten()
-    V1zr = np.swapaxes(V1z, 0, 2).flatten()
-    V2xr = np.swapaxes(V2x, 0, 2).flatten()
-    V2yr = np.swapaxes(V2y, 0, 2).flatten()
-    V2zr = np.swapaxes(V2z, 0, 2).flatten()
-    V3xr = np.swapaxes(V2x, 0, 2).flatten()
-    V3yr = np.swapaxes(V2y, 0, 2).flatten()
-    V3zr = np.swapaxes(V2z, 0, 2).flatten()
+    Ir = np.swapaxes(I.astype(np.float32), 0, 2).flatten()
+    V1xr = np.swapaxes(V1x.astype(np.float32), 0, 2).flatten()
+    V1yr = np.swapaxes(V1y.astype(np.float32), 0, 2).flatten()
+    V1zr = np.swapaxes(V1z.astype(np.float32), 0, 2).flatten()
+    V2xr = np.swapaxes(V2x.astype(np.float32), 0, 2).flatten()
+    V2yr = np.swapaxes(V2y.astype(np.float32), 0, 2).flatten()
+    V2zr = np.swapaxes(V2z.astype(np.float32), 0, 2).flatten()
+    V3xr = np.swapaxes(V2x.astype(np.float32), 0, 2).flatten()
+    V3yr = np.swapaxes(V2y.astype(np.float32), 0, 2).flatten()
+    V3zr = np.swapaxes(V2z.astype(np.float32), 0, 2).flatten()
 
     dim = np.array([Nx, Ny]).astype('uint32')
 

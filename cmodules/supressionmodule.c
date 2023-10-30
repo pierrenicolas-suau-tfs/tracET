@@ -37,9 +37,9 @@
 // Global Variables
 static int sq, lq, ld, task_size;
 //static long long int *M;
-//static double *Ixx, *Iyy, *Izz, *Ixy, *Ixz, *Iyz;
-//static double *L1, *L2, *L3;
-//static double *I, *V1x, *V1y, *V1z, *V2x, *V2y, *V2z, *V3x, *V3y, *V3z;
+//static float *Ixx, *Iyy, *Izz, *Ixy, *Ixz, *Iyz;
+//static float *L1, *L2, *L3;
+//static float *I, *V1x, *V1y, *V1z, *V2x, *V2y, *V2z, *V3x, *V3y, *V3z;
 //static unsigned char *F;
 static pthread_mutex_t mutex;
 
@@ -47,11 +47,11 @@ static pthread_mutex_t mutex;
 static void* look_neigbourhood_surf( void* ptr );
 static void* look_neigbourhood_line( void* ptr );
 static void* look_neigbourhood_point( void* ptr );
-static int dsyevv3(double A[3][3], double Q[3][3], double w[3]);
-static int dsyevc3(double A[3][3], double w[3]);
+static int dsyevv3(float A[3][3], float Q[3][3], float w[3]);
+static int dsyevc3(float A[3][3], float w[3]);
 static void* desyevv3stub( void* ptr );
 static long long int get_cache_size();
-//static int get_M(double *mat[]);
+//static int get_M(float *mat[]);
 //static int get_N(int *mat[]);
 
 //static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args);
@@ -61,10 +61,10 @@ static long long int get_cache_size();
 
 typedef struct{
 //inputs
-    double* I;
-	double* V1x;
-	double* V1y;
-	double* V1z;
+    float* I;
+	float* V1x;
+	float* V1y;
+	float* V1z;
 	long long int* M;
 	unsigned int* dim;
 
@@ -74,13 +74,13 @@ typedef struct{
 
 typedef struct{
 //inputs
-    double* I;
-	double* V1x;
-	double* V1y;
-	double* V1z;
-	double* V2x;
-	double* V2y;
-	double* V2z;
+    float* I;
+	float* V1x;
+	float* V1y;
+	float* V1z;
+	float* V2x;
+	float* V2y;
+	float* V2z;
 	long long int* M;
 	unsigned int* dim;
 
@@ -90,16 +90,16 @@ typedef struct{
 
 typedef struct{
 //inputs
-    double* I;
-	double* V1x;
-	double* V1y;
-	double* V1z;
-	double* V2x;
-	double* V2y;
-	double* V2z;
-	double* V3x;
-	double* V3y;
-	double* V3z;
+    float* I;
+	float* V1x;
+	float* V1y;
+	float* V1z;
+	float* V2x;
+	float* V2y;
+	float* V2z;
+	float* V3x;
+	float* V3y;
+	float* V3z;
 	long long int* M;
 	unsigned int* dim;
 
@@ -110,10 +110,10 @@ typedef struct{
 
 static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
 {	//Inputs
-	PyObject* I_array;//double
-	PyObject* V1x_array;//double
-	PyObject* V1y_array;//double
-	PyObject* V1z_array;//double
+	PyObject* I_array;//float
+	PyObject* V1x_array;//float
+	PyObject* V1y_array;//float
+	PyObject* V1z_array;//float
 	PyObject* M_array;//long long int
 	PyObject* dim_array;//unsigned int
 
@@ -139,28 +139,28 @@ static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
 		return NULL;}
 
 	//Transform to NumPy matrix
-	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (I_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_surf: Unable to transform I in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1z_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1z in a NumPy Matrix.\n");
@@ -217,10 +217,10 @@ static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
 
 
 	//Saving data in C
-	double* I =(double*)PyArray_DATA(I_np_array);
-	double* V1x=(double*)PyArray_DATA(V1x_np_array);
-	double* V1y=(double*)PyArray_DATA(V1y_np_array);
-	double* V1z=(double*)PyArray_DATA(V1z_np_array);
+	float* I =(float*)PyArray_DATA(I_np_array);
+	float* V1x=(float*)PyArray_DATA(V1x_np_array);
+	float* V1y=(float*)PyArray_DATA(V1y_np_array);
+	float* V1z=(float*)PyArray_DATA(V1z_np_array);
 	long long int* M=(long long int*)PyArray_DATA(M_np_array);
 	unsigned int* dim=(unsigned int*)PyArray_DATA(dim_np_array);
 
@@ -319,13 +319,13 @@ static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
 
 static PyObject * supression_nonmaxsup_line(PyObject *self, PyObject *args)
 {	//Inputs
-	PyObject* I_array;//double
-	PyObject* V1x_array;//double
-	PyObject* V1y_array;//double
-	PyObject* V1z_array;//double
-	PyObject* V2x_array;//double
-	PyObject* V2y_array;//double
-	PyObject* V2z_array;//double
+	PyObject* I_array;//float
+	PyObject* V1x_array;//float
+	PyObject* V1y_array;//float
+	PyObject* V1z_array;//float
+	PyObject* V2x_array;//float
+	PyObject* V2y_array;//float
+	PyObject* V2z_array;//float
 	PyObject* M_array;//long long int
 	PyObject* dim_array;//unsigned int
 	
@@ -353,49 +353,49 @@ static PyObject * supression_nonmaxsup_line(PyObject *self, PyObject *args)
 		return NULL;}
 
 	//Transform to NumPy matrix
-	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (I_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform I in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V1x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V1y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1z_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V1z in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V2x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V2x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V2y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V2z in a NumPy Matrix.\n");
@@ -470,13 +470,13 @@ static PyObject * supression_nonmaxsup_line(PyObject *self, PyObject *args)
 
 
 	//Saving data in C
-	double* I =(double*)PyArray_DATA(I_np_array);
-	double* V1x=(double*)PyArray_DATA(V1x_np_array);
-	double* V1y=(double*)PyArray_DATA(V1y_np_array);
-	double* V1z=(double*)PyArray_DATA(V1z_np_array);
-	double* V2x=(double*)PyArray_DATA(V2x_np_array);
-	double* V2y=(double*)PyArray_DATA(V2y_np_array);
-	double* V2z=(double*)PyArray_DATA(V2z_np_array);
+	float* I =(float*)PyArray_DATA(I_np_array);
+	float* V1x=(float*)PyArray_DATA(V1x_np_array);
+	float* V1y=(float*)PyArray_DATA(V1y_np_array);
+	float* V1z=(float*)PyArray_DATA(V1z_np_array);
+	float* V2x=(float*)PyArray_DATA(V2x_np_array);
+	float* V2y=(float*)PyArray_DATA(V2y_np_array);
+	float* V2z=(float*)PyArray_DATA(V2z_np_array);
 	long long int* M=(long long int*)PyArray_DATA(M_np_array);
 	unsigned int* dim=(unsigned int*)PyArray_DATA(dim_np_array);
 
@@ -577,16 +577,16 @@ static PyObject * supression_nonmaxsup_line(PyObject *self, PyObject *args)
 
 static PyObject * supression_nonmaxsup_point(PyObject *self, PyObject *args)
 {	//Inputs
-	PyObject* I_array;//double
-	PyObject* V1x_array;//double
-	PyObject* V1y_array;//double
-	PyObject* V1z_array;//double
-	PyObject* V2x_array;//double
-	PyObject* V2y_array;//double
-	PyObject* V2z_array;//double
-	PyObject* V3x_array;//double
-	PyObject* V3y_array;//double
-	PyObject* V3z_array;//double
+	PyObject* I_array;//float
+	PyObject* V1x_array;//float
+	PyObject* V1y_array;//float
+	PyObject* V1z_array;//float
+	PyObject* V2x_array;//float
+	PyObject* V2y_array;//float
+	PyObject* V2z_array;//float
+	PyObject* V3x_array;//float
+	PyObject* V3y_array;//float
+	PyObject* V3z_array;//float
 	PyObject* M_array;//long long int
 	PyObject* dim_array;//unsigned int
 
@@ -614,70 +614,70 @@ static PyObject * supression_nonmaxsup_point(PyObject *self, PyObject *args)
 		return NULL;}
 
 	//Transform to NumPy matrix
-	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (I_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform I in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V1x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V1y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V1z_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V1z in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V2x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V2x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V2y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V2z in a NumPy Matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* V3x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* V3x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V3x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V3x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V3x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V3y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V3y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V3y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V3y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V3y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V3z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V3z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (V3y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V3z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V3z in a NumPy Matrix.\n");
@@ -770,16 +770,16 @@ static PyObject * supression_nonmaxsup_point(PyObject *self, PyObject *args)
 
 
 	//Saving data in C
-	double* I =(double*)PyArray_DATA(I_np_array);
-	double* V1x=(double*)PyArray_DATA(V1x_np_array);
-	double* V1y=(double*)PyArray_DATA(V1y_np_array);
-	double* V1z=(double*)PyArray_DATA(V1z_np_array);
-	double* V2x=(double*)PyArray_DATA(V2x_np_array);
-	double* V2y=(double*)PyArray_DATA(V2y_np_array);
-	double* V2z=(double*)PyArray_DATA(V2z_np_array);
-	double* V3x=(double*)PyArray_DATA(V3x_np_array);
-	double* V3y=(double*)PyArray_DATA(V3y_np_array);
-	double* V3z=(double*)PyArray_DATA(V3z_np_array);
+	float* I =(float*)PyArray_DATA(I_np_array);
+	float* V1x=(float*)PyArray_DATA(V1x_np_array);
+	float* V1y=(float*)PyArray_DATA(V1y_np_array);
+	float* V1z=(float*)PyArray_DATA(V1z_np_array);
+	float* V2x=(float*)PyArray_DATA(V2x_np_array);
+	float* V2y=(float*)PyArray_DATA(V2y_np_array);
+	float* V2z=(float*)PyArray_DATA(V2z_np_array);
+	float* V3x=(float*)PyArray_DATA(V3x_np_array);
+	float* V3y=(float*)PyArray_DATA(V3y_np_array);
+	float* V3z=(float*)PyArray_DATA(V3z_np_array);
 	long long int* M=(long long int*)PyArray_DATA(M_np_array);
 	unsigned int* dim=(unsigned int*)PyArray_DATA(dim_np_array);
 
@@ -886,38 +886,38 @@ static PyObject * supression_nonmaxsup_point(PyObject *self, PyObject *args)
 
 typedef struct{
 	    //Inputs
-	    double* Ixx;
-	    double* Iyy;
-	    double* Izz;
-	    double* Ixy;
-	    double* Ixz;
-	    double* Iyz;
+	    float* Ixx;
+	    float* Iyy;
+	    float* Izz;
+	    float* Ixy;
+	    float* Ixz;
+	    float* Iyz;
 
         //outputs
-        double* L1;
-        double* L2;
-        double* L3;
-        double* V1x;
-        double* V1y;
-        double* V1z;
-        double* V2x;
-        double* V2y;
-        double* V2z;
-        double* V3x;
-        double* V3y;
-        double* V3z;
+        float* L1;
+        float* L2;
+        float* L3;
+        float* V1x;
+        float* V1y;
+        float* V1z;
+        float* V2x;
+        float* V2y;
+        float* V2z;
+        float* V3x;
+        float* V3y;
+        float* V3z;
         } Images;
 
 static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 {
     //Inputs
-    PyObject* Ixx_array;//double
-    PyObject* Iyy_array;//double
-    PyObject* Izz_array;//double
-    PyObject* Ixy_array;//double
-    PyObject* Ixz_array;//double
-    PyObject* Iyz_array;//double
-    //double *Ixx, *Iyy, *Izz, *Ixy, *Ixz, *Iyz;
+    PyObject* Ixx_array;//float
+    PyObject* Iyy_array;//float
+    PyObject* Izz_array;//float
+    PyObject* Ixy_array;//float
+    PyObject* Ixz_array;//float
+    PyObject* Iyz_array;//float
+    //float *Ixx, *Iyy, *Izz, *Ixy, *Ixz, *Iyz;
 
     //Auxiliar variables
 	int nta, nth, num_threads;
@@ -931,8 +931,8 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	//pthread_mutex_t mutex;
 
 	//Structura con datos de input e input
-    double *L1, *L2, *L3;
-    double *V1x, *V1y, *V1z, *V2x, *V2y, *V2z, *V3x, *V3y, *V3z;
+    float *L1, *L2, *L3;
+    float *V1x, *V1y, *V1z, *V2x, *V2y, *V2z, *V3x, *V3y, *V3z;
 
 
     if (!PyArg_ParseTuple(args, "OOOOOO", &Ixx_array, &Iyy_array, &Izz_array, &Ixy_array, &Ixz_array, &Iyz_array)){
@@ -943,42 +943,42 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
     }
 
     //Transform to NumPy matrix
-	PyArrayObject* Ixx_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixx_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* Ixx_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixx_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (Ixx_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Ixx in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Ixx in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Iyy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyy_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Iyy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyy_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (Ixx_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Iyy in a NumPy matrix.\n");
         printf("ERROR: desyevv Unable transforming Iyy in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Izz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Izz_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Izz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Izz_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (Izz_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Izz in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Izz in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Ixy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixy_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Ixy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixy_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (Ixy_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Ixy in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Ixy in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Ixz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixz_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Ixz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixz_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (Ixz_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Ixz in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Ixz in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Iyz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyz_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Iyz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyz_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
 	if (Iyz_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Iyz in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Iyz in a NumPy matrix.\n");
@@ -1025,12 +1025,12 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 
 	ld=mh;
 
-    double* Ixx =(double*)PyArray_DATA(Ixx_np_array);
-    double* Iyy =(double*)PyArray_DATA(Iyy_np_array);
-    double* Izz =(double*)PyArray_DATA(Izz_np_array);
-    double* Ixy =(double*)PyArray_DATA(Ixy_np_array);
-    double* Ixz =(double*)PyArray_DATA(Ixz_np_array);
-    double* Iyz =(double*)PyArray_DATA(Iyz_np_array);
+    float* Ixx =(float*)PyArray_DATA(Ixx_np_array);
+    float* Iyy =(float*)PyArray_DATA(Iyy_np_array);
+    float* Izz =(float*)PyArray_DATA(Izz_np_array);
+    float* Ixy =(float*)PyArray_DATA(Ixy_np_array);
+    float* Ixz =(float*)PyArray_DATA(Ixz_np_array);
+    float* Iyz =(float*)PyArray_DATA(Iyz_np_array);
 
 
 
@@ -1061,18 +1061,18 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 
 	//Create output c matrix
 
-	L1=(double*)malloc(m*sizeof(double));
-	L2=(double*)malloc(m*sizeof(double));
-	L3=(double*)malloc(m*sizeof(double));
-	V1x=(double*)malloc(m*sizeof(double));
-	V1y=(double*)malloc(m*sizeof(double));
-	V1z=(double*)malloc(m*sizeof(double));
-	V2x=(double*)malloc(m*sizeof(double));
-	V2y=(double*)malloc(m*sizeof(double));
-	V2z=(double*)malloc(m*sizeof(double));
-	V3x=(double*)malloc(m*sizeof(double));
-	V3y=(double*)malloc(m*sizeof(double));
-	V3z=(double*)malloc(m*sizeof(double));
+	L1=(float*)malloc(m*sizeof(float));
+	L2=(float*)malloc(m*sizeof(float));
+	L3=(float*)malloc(m*sizeof(float));
+	V1x=(float*)malloc(m*sizeof(float));
+	V1y=(float*)malloc(m*sizeof(float));
+	V1z=(float*)malloc(m*sizeof(float));
+	V2x=(float*)malloc(m*sizeof(float));
+	V2y=(float*)malloc(m*sizeof(float));
+	V2z=(float*)malloc(m*sizeof(float));
+	V3x=(float*)malloc(m*sizeof(float));
+	V3y=(float*)malloc(m*sizeof(float));
+	V3z=(float*)malloc(m*sizeof(float));
 
     Images image;
     image.Ixx=Ixx;
@@ -1093,7 +1093,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
     image.V3x=V3x;
     image.V3y=V3y;
     image.V3z=V3z;
-    //double* images[18] = {Ixx,Iyy,Izz,Ixy,Ixz,Iyz,L1,L2,L3,V1x,V1y,V1z,V2x,V2y,V2z,V3x,V3y,V3z};
+    //float* images[18] = {Ixx,Iyy,Izz,Ixy,Ixz,Iyz,L1,L2,L3,V1x,V1y,V1z,V2x,V2y,V2z,V3x,V3y,V3z};
 
 	// Set pointer for initial splitting
 	nta = (float)m / task_size;
@@ -1138,7 +1138,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 
 
 	//Save outputs as a mumpy array
-	PyObject* L1_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.L1);
+	PyObject* L1_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.L1);
 
 
 	if (L1_array == NULL) {
@@ -1152,7 +1152,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)L1_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* L2_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.L2);
+	PyObject* L2_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.L2);
 	if (L2_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L2.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix L2.\n");
@@ -1161,7 +1161,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)L2_array, NPY_ARRAY_OWNDATA);
 
-	PyObject* L3_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.L3);
+	PyObject* L3_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.L3);
 	if (L3_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L3.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix L3.\n");
@@ -1171,7 +1171,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)L3_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V1x_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V1x);
+	PyObject* V1x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V1x);
 	if (V1x_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1x.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V1x.\n");
@@ -1181,7 +1181,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1x_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V1y_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V1y);
+	PyObject* V1y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V1y);
 	if (V1y_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1y.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V1y.\n");
@@ -1190,7 +1190,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1y_array, NPY_ARRAY_OWNDATA);
 
-	PyObject* V1z_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V1z);
+	PyObject* V1z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V1z);
 	if (V1z_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1z.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V1z.\n");
@@ -1200,7 +1200,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1z_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V2x_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V2x);
+	PyObject* V2x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V2x);
 	if (V2x_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2x.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V2x.\n");
@@ -1210,7 +1210,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2x_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V2y_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V2y);
+	PyObject* V2y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V2y);
 	if (V2y_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2y.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V2y.\n");
@@ -1220,7 +1220,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2y_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V2z_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V2z);
+	PyObject* V2z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V2z);
 	if (V2z_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2z.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V2z.\n");
@@ -1230,7 +1230,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2z_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V3x_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V3x);
+	PyObject* V3x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V3x);
 	if (V3x_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3x.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V3x.\n");
@@ -1240,7 +1240,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)V3x_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V3y_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V3y);
+	PyObject* V3y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V3y);
 	if (V3y_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3y.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V3i.\n");
@@ -1250,7 +1250,7 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 	PyArray_ENABLEFLAGS((PyArrayObject*)V3y_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V3z_array = PyArray_SimpleNewFromData(1, &mh, NPY_DOUBLE, image.V3z);
+	PyObject* V3z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V3z);
 	if (V3z_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3z.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V3z.\n");
@@ -1272,43 +1272,43 @@ static void* desyevv3stub( void* ptr ){
 
     typedef struct{
 	    //Inputs
-	    double* Ixx;
-	    double* Iyy;
-	    double* Izz;
-	    double* Ixy;
-	    double* Ixz;
-	    double* Iyz;
+	    float* Ixx;
+	    float* Iyy;
+	    float* Izz;
+	    float* Ixy;
+	    float* Ixz;
+	    float* Iyz;
 
         //outputs
-        double* L1;
-        double* L2;
-        double* L3;
-        double* V1x;
-        double* V1y;
-        double* V1z;
-        double* V2x;
-        double* V2y;
-        double* V2z;
-        double* V3x;
-        double* V3y;
-        double* V3z;
+        float* L1;
+        float* L2;
+        float* L3;
+        float* V1x;
+        float* V1y;
+        float* V1z;
+        float* V2x;
+        float* V2y;
+        float* V2z;
+        float* V3x;
+        float* V3y;
+        float* V3z;
         } Images;
 
 	int start, end;
-	double A[3][3];
-	double Q[3][3];
-	double w[3];
+	float A[3][3];
+	float Q[3][3];
+	float w[3];
 	bool lock = true;
 
 
 	//Cargo el pointer
 	Images* image = (Images*)ptr;
-    double* Ixx = image->Ixx;
-    double* Iyy = image->Iyy;
-    double* Izz = image->Izz;
-    double* Ixy = image->Ixy;
-    double* Ixz = image->Ixz;
-    double* Iyz = image->Iyz;
+    float* Ixx = image->Ixx;
+    float* Iyy = image->Iyy;
+    float* Izz = image->Izz;
+    float* Ixy = image->Ixy;
+    float* Ixz = image->Ixz;
+    float* Iyz = image->Iyz;
 
 
 
@@ -1390,7 +1390,7 @@ static void* desyevv3stub( void* ptr ){
 }
 
 // ----------------------------------------------------------------------------
-static int dsyevv3(double A[3][3], double Q[3][3], double w[3])
+static int dsyevv3(float A[3][3], float Q[3][3], float w[3])
 // ----------------------------------------------------------------------------
 // Calculates the eigenvalues and normalized eigenvectors of a symmetric 3x3
 // matrix A using Cardano's method for the eigenvalues and an analytical
@@ -1419,15 +1419,15 @@ static int dsyevv3(double A[3][3], double Q[3][3], double w[3])
 // ----------------------------------------------------------------------------
 {
 #ifndef EVALS_ONLY
-	double norm;          // Squared norm or inverse norm of current eigenvector
-	double n0, n1;        // Norm of first and second columns of A
-	double n0tmp, n1tmp;  // "Templates" for the calculation of n0/n1 - saves a few FLOPS
-	double thresh;        // Small number used as threshold for floating point comparisons
-	double error;         // Estimated maximum roundoff error in some steps
-	double wmax;          // The eigenvalue of maximum modulus
-	double f, t;          // Intermediate storage
+	float norm;          // Squared norm or inverse norm of current eigenvector
+	float n0, n1;        // Norm of first and second columns of A
+	float n0tmp, n1tmp;  // "Templates" for the calculation of n0/n1 - saves a few FLOPS
+	float thresh;        // Small number used as threshold for floating point comparisons
+	float error;         // Estimated maximum roundoff error in some steps
+	float wmax;          // The eigenvalue of maximum modulus
+	float f, t;          // Intermediate storage
 	int i, j;             // Loop counters
-	double hold;
+	float hold;
 #endif
 
 	// Calculate eigenvalues
@@ -1622,7 +1622,7 @@ static int dsyevv3(double A[3][3], double Q[3][3], double w[3])
 }
 
 // ----------------------------------------------------------------------------
-static int dsyevc3(double A[3][3], double w[3])
+static int dsyevc3(float A[3][3], float w[3])
 // ----------------------------------------------------------------------------
 // Calculates the eigenvalues of a symmetric 3x3 matrix A using Cardano's
 // analytical algorithm.
@@ -1638,23 +1638,23 @@ static int dsyevc3(double A[3][3], double w[3])
 //  -1: Error
 // ----------------------------------------------------------------------------
 {
-	double m, c1, c0;
+	float m, c1, c0;
 
 	// Determine coefficients of characteristic poynomial. We write
 	//       | a   d   f  |
 	//  A =  | d*  b   e  |
 	//       | f*  e*  c  |
-	double de = A[0][1] * A[1][2];                                    // d * e
-	double dd = SQR(A[0][1]);                                         // d^2
-	double ee = SQR(A[1][2]);                                         // e^2
-	double ff = SQR(A[0][2]);                                         // f^2
+	float de = A[0][1] * A[1][2];                                    // d * e
+	float dd = SQR(A[0][1]);                                         // d^2
+	float ee = SQR(A[1][2]);                                         // e^2
+	float ff = SQR(A[0][2]);                                         // f^2
 	m  = A[0][0] + A[1][1] + A[2][2];
 	c1 = (A[0][0]*A[1][1] + A[0][0]*A[2][2] + A[1][1]*A[2][2])        // a*b + a*c + b*c - d^2 - e^2 - f^2
 	- (dd + ee + ff);
 	c0 = A[2][2]*dd + A[0][0]*ee + A[1][1]*ff - A[0][0]*A[1][1]*A[2][2]
 	- 2.0 * A[0][2]*de;                                     // c*d^2 + a*e^2 + b*f^2 - a*b*c - 2*f*d*e)
 
-	double p, sqrt_p, q, c, s, phi;
+	float p, sqrt_p, q, c, s, phi;
 	p = SQR(m) - 3.0*c1;
 	q = m*(p - (3.0/2.0)*c1) - (27.0/2.0)*c0;
 	sqrt_p = sqrt(fabs(p));
@@ -1680,10 +1680,10 @@ static void* look_neigbourhood_surf( void* ptr ){
 
     typedef struct{
 //inputs
-    double* I;
-	double* V1x;
-	double* V1y;
-	double* V1z;
+    float* I;
+	float* V1x;
+	float* V1y;
+	float* V1z;
 	long long int* M;
 	unsigned int* dim;
 
@@ -1695,34 +1695,34 @@ static void* look_neigbourhood_surf( void* ptr ){
 	unsigned int mx, my ;
 	//unsigned int *dim;
 	int sz, start, end;
-	double lv1, hold1, k1x, k1y, k1z;
-	double* A1[8];
-	double* B1[8];
-	double* V1a;
-	double* V1b;
-	double** K1;
+	float lv1, hold1, k1x, k1y, k1z;
+	float* A1[8];
+	float* B1[8];
+	float* V1a;
+	float* V1b;
+	float** K1;
 	unsigned char lock = 0x01;
 	Tomos* tomo = (Tomos*)ptr;
-	double* I = tomo->I;
-	double* V1x = tomo->V1x;
-	double* V1y = tomo->V1y;
-	double* V1z = tomo->V1z;
+	float* I = tomo->I;
+	float* V1x = tomo->V1x;
+	float* V1y = tomo->V1y;
+	float* V1z = tomo->V1z;
 	long long int* M = tomo->M;
 	unsigned int* dim = tomo->dim;
 	mx = dim[0];
 	my = dim[1];
 
 	// Buffers initialization
-	sz = task_size * sizeof(double);
+	sz = task_size * sizeof(float);
 	for (i=0; i<8; i++) {
-		A1[i] = (double*)malloc( sz );
-		B1[i] = (double*)malloc( sz );
+		A1[i] = (float*)malloc( sz );
+		B1[i] = (float*)malloc( sz );
 	}
-	V1a = (double*)malloc( sz );
-	V1b = (double*)malloc( sz );
-	K1 = (double**)malloc( 3*sizeof(double*) );
+	V1a = (float*)malloc( sz );
+	V1b = (float*)malloc( sz );
+	K1 = (float**)malloc( 3*sizeof(float*) );
 	for (i=0; i<3; i++) {
-		K1[i] = (double*)malloc( sz );
+		K1[i] = (float*)malloc( sz );
 	}
 
 	// Task loop
@@ -1936,13 +1936,13 @@ static void* look_neigbourhood_line( void* ptr ){
 
     typedef struct{
 //inputs
-    double* I;
-	double* V1x;
-	double* V1y;
-	double* V1z;
-	double* V2x;
-	double* V2y;
-	double* V2z;
+    float* I;
+	float* V1x;
+	float* V1y;
+	float* V1z;
+	float* V2x;
+	float* V2y;
+	float* V2z;
 	long long int* M;
 	unsigned int* dim;
 
@@ -1954,49 +1954,49 @@ static void* look_neigbourhood_line( void* ptr ){
 	unsigned int mx, my ;
 	//unsigned int *dim;
 	int sz, start, end;
-	double lv1, hold1, k1x, k1y, k1z;
-	double lv2, hold2, k2x, k2y, k2z;
-	double* A1[8];
-	double* B1[8];
-	double* A2[8];
-	double* B2[8];
-	double* V1a;
-	double* V1b;
-	double* V2a;
-	double* V2b;
-	double** K1;
-	double** K2;
+	float lv1, hold1, k1x, k1y, k1z;
+	float lv2, hold2, k2x, k2y, k2z;
+	float* A1[8];
+	float* B1[8];
+	float* A2[8];
+	float* B2[8];
+	float* V1a;
+	float* V1b;
+	float* V2a;
+	float* V2b;
+	float** K1;
+	float** K2;
 	unsigned char lock = 0x01;
 	Tomos* tomo = (Tomos*)ptr;
-	double* I = tomo->I;
-	double* V1x = tomo->V1x;
-	double* V1y = tomo->V1y;
-	double* V1z = tomo->V1z;
-	double* V2x = tomo->V2x;
-	double* V2y = tomo->V2y;
-	double* V2z = tomo->V2z;
+	float* I = tomo->I;
+	float* V1x = tomo->V1x;
+	float* V1y = tomo->V1y;
+	float* V1z = tomo->V1z;
+	float* V2x = tomo->V2x;
+	float* V2y = tomo->V2y;
+	float* V2z = tomo->V2z;
 	long long int* M = tomo->M;
 	unsigned int* dim = tomo->dim;
 	mx = dim[0];
 	my = dim[1];
 
 	// Buffers initialization
-	sz = task_size * sizeof(double);
+	sz = task_size * sizeof(float);
 	for (i=0; i<8; i++) {
-		A1[i] = (double*)malloc( sz );
-		B1[i] = (double*)malloc( sz );
-		A2[i] = (double*)malloc( sz );
-		B2[i] = (double*)malloc( sz );
+		A1[i] = (float*)malloc( sz );
+		B1[i] = (float*)malloc( sz );
+		A2[i] = (float*)malloc( sz );
+		B2[i] = (float*)malloc( sz );
 	}	
-	V1a = (double*)malloc( sz );
-	V1b = (double*)malloc( sz );
-	K1 = (double**)malloc( 3*sizeof(double*) );
-	V2a = (double*)malloc( sz );
-	V2b = (double*)malloc( sz );
-	K2 = (double**)malloc( 3*sizeof(double*) );
+	V1a = (float*)malloc( sz );
+	V1b = (float*)malloc( sz );
+	K1 = (float**)malloc( 3*sizeof(float*) );
+	V2a = (float*)malloc( sz );
+	V2b = (float*)malloc( sz );
+	K2 = (float**)malloc( 3*sizeof(float*) );
 	for (i=0; i<3; i++) {
-		K1[i] = (double*)malloc( sz );
-		K2[i] = (double*)malloc( sz );
+		K1[i] = (float*)malloc( sz );
+		K2[i] = (float*)malloc( sz );
 	}
 	
 	// Task loop
@@ -2367,16 +2367,16 @@ static void* look_neigbourhood_point( void* ptr ){
 
     typedef struct{
 //inputs
-    double* I;
-	double* V1x;
-	double* V1y;
-	double* V1z;
-	double* V2x;
-	double* V2y;
-	double* V2z;
-	double* V3x;
-	double* V3y;
-	double* V3z;
+    float* I;
+	float* V1x;
+	float* V1y;
+	float* V1z;
+	float* V2x;
+	float* V2y;
+	float* V2z;
+	float* V3x;
+	float* V3y;
+	float* V3z;
 	long long int* M;
 	unsigned int* dim;
 
@@ -2388,64 +2388,64 @@ static void* look_neigbourhood_point( void* ptr ){
 	unsigned int mx, my ;
 	//unsigned int *dim;
 	int sz, start, end;
-	double lv1, hold1, k1x, k1y, k1z;
-	double lv2, hold2, k2x, k2y, k2z;
-	double lv3, hold3, k3x, k3y, k3z;
-	double* A1[8];
-	double* B1[8];
-	double* A2[8];
-	double* B2[8];
-	double* A3[8];
-	double* B3[8];
-	double* V1a;
-	double* V1b;
-	double* V2a;
-	double* V2b;
-	double* V3a;
-	double* V3b;
-	double** K1;
-	double** K2;
-	double** K3;
+	float lv1, hold1, k1x, k1y, k1z;
+	float lv2, hold2, k2x, k2y, k2z;
+	float lv3, hold3, k3x, k3y, k3z;
+	float* A1[8];
+	float* B1[8];
+	float* A2[8];
+	float* B2[8];
+	float* A3[8];
+	float* B3[8];
+	float* V1a;
+	float* V1b;
+	float* V2a;
+	float* V2b;
+	float* V3a;
+	float* V3b;
+	float** K1;
+	float** K2;
+	float** K3;
 	unsigned char lock = 0x01;
 	Tomos* tomo = (Tomos*)ptr;
-	double* I = tomo->I;
-	double* V1x = tomo->V1x;
-	double* V1y = tomo->V1y;
-	double* V1z = tomo->V1z;
-	double* V2x = tomo->V2x;
-	double* V2y = tomo->V2y;
-	double* V2z = tomo->V2z;
-	double* V3x = tomo->V3x;
-	double* V3y = tomo->V3y;
-	double* V3z = tomo->V3z;
+	float* I = tomo->I;
+	float* V1x = tomo->V1x;
+	float* V1y = tomo->V1y;
+	float* V1z = tomo->V1z;
+	float* V2x = tomo->V2x;
+	float* V2y = tomo->V2y;
+	float* V2z = tomo->V2z;
+	float* V3x = tomo->V3x;
+	float* V3y = tomo->V3y;
+	float* V3z = tomo->V3z;
 	long long int* M = tomo->M;
 	unsigned int* dim = tomo->dim;
 	mx = dim[0];
 	my = dim[1];
 
 	// Buffers initialization
-	sz = task_size * sizeof(double);
+	sz = task_size * sizeof(float);
 	for (i=0; i<8; i++) {
-		A1[i] = (double*)malloc( sz );
-		B1[i] = (double*)malloc( sz );
-		A2[i] = (double*)malloc( sz );
-		B2[i] = (double*)malloc( sz );
-		A3[i] = (double*)malloc( sz );
-		B3[i] = (double*)malloc( sz );
+		A1[i] = (float*)malloc( sz );
+		B1[i] = (float*)malloc( sz );
+		A2[i] = (float*)malloc( sz );
+		B2[i] = (float*)malloc( sz );
+		A3[i] = (float*)malloc( sz );
+		B3[i] = (float*)malloc( sz );
 	}
-	V1a = (double*)malloc( sz );
-	V1b = (double*)malloc( sz );
-	K1 = (double**)malloc( 3*sizeof(double*) );
-	V2a = (double*)malloc( sz );
-	V2b = (double*)malloc( sz );
-	K2 = (double**)malloc( 3*sizeof(double*) );
-	V3a = (double*)malloc( sz );
-	V3b = (double*)malloc( sz );
-	K3 = (double**)malloc( 3*sizeof(double*) );
+	V1a = (float*)malloc( sz );
+	V1b = (float*)malloc( sz );
+	K1 = (float**)malloc( 3*sizeof(float*) );
+	V2a = (float*)malloc( sz );
+	V2b = (float*)malloc( sz );
+	K2 = (float**)malloc( 3*sizeof(float*) );
+	V3a = (float*)malloc( sz );
+	V3b = (float*)malloc( sz );
+	K3 = (float**)malloc( 3*sizeof(float*) );
 	for (i=0; i<3; i++) {
-		K1[i] = (double*)malloc( sz );
-		K2[i] = (double*)malloc( sz );
-		K3[i] = (double*)malloc( sz );
+		K1[i] = (float*)malloc( sz );
+		K2[i] = (float*)malloc( sz );
+		K3[i] = (float*)malloc( sz );
 	}
 
 	// Task loop
@@ -2989,7 +2989,7 @@ static long long int get_cache_size()
 	
 	return ((long long int)cache_size) * BYTE_PER_KBYTE; }
 /*
-static int get_M(double *mat[]) {
+static int get_M(float *mat[]) {
 	return sizeof(mat)/sizeof(mat[0]);}
 static int get_N(int *mat[]) {
 	return sizeof(mat[0])/sizeof(mat[0][0]);}

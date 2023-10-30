@@ -91,9 +91,9 @@ def main(argv):
     if in_tomo is not None:
         print('\t-Loading input tomogram:', in_tomo)
         if os.path.splitext(in_tomo)[1] == '.mrc':
-            tomo = lio.load_mrc(in_tomo)
+            tomo = lio.load_mrc(in_tomo).astype(np.float32)
         else:
-            tomo = nrrd.read(in_tomo)[0]
+            tomo = nrrd.read(in_tomo)[0].astype(np.float32)
     else:
         print('The input tomogram \'-i\' (--itomo) must be provided')
         print_help_msg()
@@ -103,9 +103,9 @@ def main(argv):
     if in_tomo is not None:
         print('\t-Loading the ground truth tomogram:', in_tomo_gt)
         if os.path.splitext(in_tomo_gt)[1] == '.mrc':
-            tomo_gt = lio.load_mrc(in_tomo)
+            tomo_gt = lio.load_mrc(in_tomo).astype(np.float32)
         else:
-            tomo_gt = nrrd.read(in_tomo)[0]
+            tomo_gt = nrrd.read(in_tomo)[0].astype(np.float32)
     else:
         print('The ground truth tomogram \'-g\' (--igt) must be provided')
         print_help_msg()
