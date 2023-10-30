@@ -10,6 +10,6 @@ module1 = Extension('supression',
 
 setup (name = 'supression',
        version = '1.0',
-       description = 'This package contains the function nonmaxsup',
+       description = 'This package contains the functions to perform non-maximum suppression for different structures',
        ext_modules = [module1],
        include_dirs=[numpy.get_include()])

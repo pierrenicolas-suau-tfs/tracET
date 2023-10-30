@@ -2,7 +2,7 @@
 import sys, getopt, time
 from vtk_uts import *
 from graph_uts import *
-from mt import lio
+from core import lio
 
 
 def main(argv):

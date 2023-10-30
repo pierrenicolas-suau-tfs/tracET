@@ -3,7 +3,8 @@ Function implementing differentioal geometry operations on tomograms
 """
 
 import numpy as np
-from supression import desyevv, nonmaxsup
+from supression import desyevv, nonmaxsup_0, nonmaxsup_1, nonmaxsup_2
+
 
 def angauss(I, s, r=1):
     """
@@ -59,8 +60,8 @@ def diff3d(T, k):
 
     """
     [Nx, Ny, Nz] = np.shape(T)
-    Idp = np.zeros((Nx, Ny, Nz))
-    Idn = np.zeros((Nx, Ny, Nz))
+    Idp = np.zeros((Nx, Ny, Nz), dtype=T.dtype)
+    Idn = np.zeros((Nx, Ny, Nz), dtype=T.dtype)
 
     if k == 0:
         Idp[0:Nx - 2, :, :] = T[1:Nx - 1, :, :]
@@ -134,21 +135,54 @@ def eig3dk(Ixx, Iyy, Izz, Ixy, Ixz, Iyz):
     return [L1, L2, L3, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z]
 
 
-def nonmaxsup_line(I, M, V1x, V1y, V1z, V2x, V2y, V2z):
+def nonmaxsup_surf(I, M, V1x, V1y, V1z):
+    """
+    Applies non-maximum suppresion criteria for detecting local maxima in 2-manifolds (surfaces)
+    :param I: input tomogram
+    :param M: input mask (the criterion is applied only max 1-valued voxels, otherwise a zero is directly assigned)
+    :param Vnm: the coordinate 'm' of the 'n' eigenvector
+    :param return: a binary tomogram were 1-valued voxel are the ones fulfilling non-maximum suppression criteria
     """
 
-    Args:
-        I:
-        M:
-        V1x:
-        V1y:
-        V1z:
-        V2x:
-        V2y:
-        V2z:
+    [Nx, Ny, Nz] = np.shape(I)
+    H = np.zeros((Nx, Ny, Nz))
+    H[1:Nx - 2, 1:Ny - 2, 1:Nz - 2] = 1
+    M = M * H
+    del H
+    M = np.swapaxes(M, 0, 2).flatten().astype(int)
+    Mr = np.arange(0, Nx * Ny * Nz, dtype=int)
+    Mr = Mr[M == 1]
 
-    Returns:
+    Ir = np.swapaxes(I, 0, 2).flatten()
+    V1xr = np.swapaxes(V1x, 0, 2).flatten()
+    V1yr = np.swapaxes(V1y, 0, 2).flatten()
+    V1zr = np.swapaxes(V1z, 0, 2).flatten()
 
+    dim = np.array([Nx, Ny]).astype('uint32')
+
+    Br = nonmaxsup_2(Ir, V1xr, V1yr, V1zr, Mr, dim)
+    del Ir
+    del V1xr
+    del V1yr
+    del V1zr
+    del Mr
+
+    B = np.swapaxes(np.reshape(Br, (Nz, Ny, Nx)), 0, 2)
+    H = np.zeros((Nx, Ny, Nz))
+    H[2:Nx - 2, 2:Ny - 2, 2:Nz - 2] = 1
+    B = B * H
+    del H
+
+    return B
+
+
+def nonmaxsup_line(I, M, V1x, V1y, V1z, V2x, V2y, V2z):
+    """
+    Applies non-maximum suppresion criteria for detecting local maxima in 1-manifolds (lines)
+    :param I: input tomogram
+    :param M: input mask (the criterion is applied only max 1-valued voxels, otherwise a zero is directly assigned)
+    :param Vnm: the coordinate 'm' of the 'n' eigenvector
+    :param return: a binary tomogram were 1-valued voxel are the ones fulfilling non-maximum suppression criteria
     """
 
     [Nx, Ny, Nz] = np.shape(I)
@@ -170,7 +204,7 @@ def nonmaxsup_line(I, M, V1x, V1y, V1z, V2x, V2y, V2z):
 
     dim = np.array([Nx, Ny]).astype('uint32')
 
-    Br = nonmaxsup(Ir, V1xr, V1yr, V1zr, V2xr, V2yr, V2zr, Mr, dim)
+    Br = nonmaxsup_1(Ir, V1xr, V1yr, V1zr, V2xr, V2yr, V2zr, Mr, dim)
     del Ir
     del V1xr
     del V1yr
@@ -185,4 +219,58 @@ def nonmaxsup_line(I, M, V1x, V1y, V1z, V2x, V2y, V2z):
     H[2:Nx - 2, 2:Ny - 2, 2:Nz - 2] = 1
     B = B * H
     del H
-    return (B)
+
+    return B
+
+
+def nonmaxsup_point(I, M, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z):
+    """
+    Applies non-maximum suppresion criteria for detecting local maxima in 0-manifolds (points)
+    :param I: input tomogram
+    :param M: input mask (the criterion is applied only max 1-valued voxels, otherwise a zero is directly assigned)
+    :param Vnm: the coordinate 'm' of the 'n' eigenvector
+    :param return: a binary tomogram were 1-valued voxel are the ones fulfilling non-maximum suppression criteria
+    """
+
+    [Nx, Ny, Nz] = np.shape(I)
+    H = np.zeros((Nx, Ny, Nz))
+    H[1:Nx - 2, 1:Ny - 2, 1:Nz - 2] = 1
+    M = M * H
+    del H
+    M = np.swapaxes(M, 0, 2).flatten().astype(int)
+    Mr = np.arange(0, Nx * Ny * Nz, dtype=int)
+    Mr = Mr[M == 1]
+
+    Ir = np.swapaxes(I, 0, 2).flatten()
+    V1xr = np.swapaxes(V1x, 0, 2).flatten()
+    V1yr = np.swapaxes(V1y, 0, 2).flatten()
+    V1zr = np.swapaxes(V1z, 0, 2).flatten()
+    V2xr = np.swapaxes(V2x, 0, 2).flatten()
+    V2yr = np.swapaxes(V2y, 0, 2).flatten()
+    V2zr = np.swapaxes(V2z, 0, 2).flatten()
+    V3xr = np.swapaxes(V2x, 0, 2).flatten()
+    V3yr = np.swapaxes(V2y, 0, 2).flatten()
+    V3zr = np.swapaxes(V2z, 0, 2).flatten()
+
+    dim = np.array([Nx, Ny]).astype('uint32')
+
+    Br = nonmaxsup_0(Ir, V1xr, V1yr, V1zr, V2xr, V2yr, V2zr, V3xr, V3yr, V3zr, Mr, dim)
+    del Ir
+    del V1xr
+    del V1yr
+    del V1zr
+    del V2xr
+    del V2yr
+    del V2zr
+    del V3xr
+    del V3yr
+    del V3zr
+    del Mr
+
+    B = np.swapaxes(np.reshape(Br, (Nz, Ny, Nx)), 0, 2)
+    H = np.zeros((Nx, Ny, Nz))
+    H[2:Nx - 2, 2:Ny - 2, 2:Nz - 2] = 1
+    B = B * H
+    del H
+
+    return B

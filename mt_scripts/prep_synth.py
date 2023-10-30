@@ -6,7 +6,7 @@ import os
 import numpy as np
 import scipy as sp
 import pandas as pd
-from mt.lio import load_mrc, write_mrc
+from core.lio import load_mrc, write_mrc
 
 ROOT_PATH = '/media/martinez/Sistema/Users/Antonio/workspace/data/mt_nih/synth_tubules'
 

@@ -10,7 +10,7 @@ import numpy as np
 from scipy import ndimage
 import sys, getopt, os, time, csv
 
-from mt import lio
+from core import lio
 from mt import utils
 
 

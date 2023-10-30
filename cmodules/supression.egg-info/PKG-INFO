@@ -1,4 +1,4 @@
 Metadata-Version: 2.1
 Name: supression
 Version: 1.0
-Summary: This pakckage contains the function nonmaxsup
+Summary: This package contains the functions to perform non-maximum suppression for different structures

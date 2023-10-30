@@ -13,7 +13,7 @@ import pandas as pd
 import scipy as sp
 
 from mt.representation import points_to_btomo, seg_dist_trans, gauss_decay
-from mt.lio import load_mrc, write_mrc
+from core.lio import load_mrc, write_mrc
 import deepfinder.utils.objl as ol
 
 

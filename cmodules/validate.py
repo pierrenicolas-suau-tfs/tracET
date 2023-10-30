@@ -1,8 +1,8 @@
-from mt import lio
+from core import lio
 import numpy as np
 
-T_py=lio.load_mrc('/data/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_supred_python.mrc')
-T_mat=lio.load_mrc('/data/chiem/pelayo/neural_network/compara/matlab/Ctrl_20220511_368d_tomo06_reg_synth_supred_matlab.mrc')
+T_py= lio.load_mrc('/data/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_supred_python.mrc')
+T_mat= lio.load_mrc('/data/chiem/pelayo/neural_network/compara/matlab/Ctrl_20220511_368d_tomo06_reg_synth_supred_matlab.mrc')
 compare=0
 python=0
 matlab=0

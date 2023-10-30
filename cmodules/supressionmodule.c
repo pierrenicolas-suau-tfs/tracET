@@ -44,7 +44,9 @@ static int sq, lq, ld, task_size;
 static pthread_mutex_t mutex;
 
 // Global functions
-static void* look_neigbourhood( void* ptr );
+static void* look_neigbourhood_surf( void* ptr );
+static void* look_neigbourhood_line( void* ptr );
+static void* look_neigbourhood_point( void* ptr );
 static int dsyevv3(double A[3][3], double Q[3][3], double w[3]);
 static int dsyevc3(double A[3][3], double w[3]);
 static void* desyevv3stub( void* ptr );
@@ -63,6 +65,19 @@ typedef struct{
 	double* V1x;
 	double* V1y;
 	double* V1z;
+	long long int* M;
+	unsigned int* dim;
+
+    //Output
+	unsigned int* F ;
+    }Tomos_surf;
+
+typedef struct{
+//inputs
+    double* I;
+	double* V1x;
+	double* V1y;
+	double* V1z;
 	double* V2x;
 	double* V2y;
 	double* V2z;
@@ -71,8 +86,238 @@ typedef struct{
 
     //Output
 	unsigned int* F ;
-    }Tomos;
-static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
+    }Tomos_line;
+
+typedef struct{
+//inputs
+    double* I;
+	double* V1x;
+	double* V1y;
+	double* V1z;
+	double* V2x;
+	double* V2y;
+	double* V2z;
+	double* V3x;
+	double* V3y;
+	double* V3z;
+	long long int* M;
+	unsigned int* dim;
+
+    //Output
+	unsigned int* F ;
+    }Tomos_point;
+
+
+static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
+{	//Inputs
+	PyObject* I_array;//double
+	PyObject* V1x_array;//double
+	PyObject* V1y_array;//double
+	PyObject* V1z_array;//double
+	PyObject* M_array;//long long int
+	PyObject* dim_array;//unsigned int
+
+
+
+	//Auxiliar variables
+	int i, nta, nth, num_threads;
+	//int type;
+	int m, mh;
+	npy_intp mn, mhn;
+	//size_t len, len64;
+	long long int dat64;
+	pthread_t* threads;
+	//int sq, lq, ld, task_size;
+	//pthread_mutex_t mutex;
+
+	unsigned int* F ;
+
+
+	if (!PyArg_ParseTuple(args,"OOOOOOOOO",&I_array,&V1x_array,&V1y_array,&V1z_array,&M_array,&dim_array)){
+	    printf("ERROR: supression_nonmaxsup_surf: Unable to load inputs.\n");
+	    PyErr_SetString(PyExc_TypeError, "Unable to load inputs.\n");
+		return NULL;}
+
+	//Transform to NumPy matrix
+	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (I_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_surf: Unable to transform I in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V1x_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1x in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V1y_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1y in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V1z_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1z in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* M_np_array = (PyArrayObject*)PyArray_FROM_OTF(M_array, NPY_INT64, NPY_ARRAY_IN_ARRAY);
+	if (M_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming M in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_surf: Unable to transform M in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* dim_np_array = (PyArrayObject*)PyArray_FROM_OTF(dim_array, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
+	if (dim_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming dim in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_surf: Unable to transform dim in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+
+    //Checking dimensions
+
+    mn= PyArray_DIMS(I_np_array)[0];
+    m=(int)mn;
+
+    if (PyArray_DIMS(V1x_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_surf: Dimensions mismatch.\n");
+		return NULL;
+
+    }
+
+    if (PyArray_DIMS(V1y_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_surf: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V1z_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_surf: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+
+    mhn=PyArray_DIMS(M_np_array)[0];
+    mh=(int)mhn;
+	if (mh>m){
+		PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Mask dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_surf: Mask dimensions mismatch.\n");
+		return NULL;
+	}
+
+
+	//Saving data in C
+	double* I =(double*)PyArray_DATA(I_np_array);
+	double* V1x=(double*)PyArray_DATA(V1x_np_array);
+	double* V1y=(double*)PyArray_DATA(V1y_np_array);
+	double* V1z=(double*)PyArray_DATA(V1z_np_array);
+	long long int* M=(long long int*)PyArray_DATA(M_np_array);
+	unsigned int* dim=(unsigned int*)PyArray_DATA(dim_np_array);
+
+	//Free memory
+	Py_XDECREF(I_np_array);
+	Py_XDECREF(V1x_np_array); Py_XDECREF(V1y_np_array); Py_XDECREF(V1z_np_array);
+	Py_XDECREF(M_np_array);
+	Py_XDECREF(dim_np_array);
+
+	// Get computer information to set the number of thread and the size of buffers
+	num_threads = (int)sysconf(_SC_NPROCESSORS_ONLN);
+	if (num_threads<1) {
+		PyErr_SetString(PyExc_RuntimeError,"suppresionmodule.c: No active CPU found..\n");
+		printf("ERROR: supression_nonmaxsup_surf: No active CPU found..\n");
+		return NULL;
+	}
+
+	//num_threads=1;
+	dat64 = get_cache_size();
+	if (dat64<1) {
+		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: Unable to get cache size.\n");
+		printf("ERROR: supression_nonmaxsup_surf: Unable to get cache size.\n");
+		return NULL;
+	}
+	task_size = ceil( (CACHE_USED*dat64) / 18 );
+
+
+	ld = mh;
+
+	// Create the array for holding the output result
+
+	F= (unsigned int*)malloc(m*sizeof(unsigned int));
+
+    Tomos_surf tomo;
+    tomo.I=I;
+    tomo.V1x=V1x;
+    tomo.V1y=V1y;
+    tomo.V1z=V1z;
+    tomo.M=M;
+    tomo.dim=dim;
+
+    tomo.F=F;
+
+	// Assign pointers to data
+
+
+	// Set pointer for initial splitting
+	nta = (float)m / task_size;
+	nta = ceil( nta );
+	nth = num_threads;
+	if (nta<nth) {
+		nth = nta;
+	}
+
+	// Throw the workers
+	lq = m;
+	sq = 0; // Task queue initialization
+	if (pthread_mutex_init( &mutex, NULL ) ){
+		PyErr_SetString(PyExc_RuntimeError,"suppressionmodule.c: Error creating the mutex.\n");
+		printf("ERROR: supression_nonmaxsup_surf: Unable to create the mutex.\n");
+		return NULL;
+	}
+
+	threads = (pthread_t*)malloc( nth*sizeof(pthread_t) );
+	for (i=0; i<nth; i++) {
+		// Update process queue pointers
+		if (pthread_create(&threads[i],NULL,&look_neigbourhood_surf,&tomo)) {
+			PyErr_SetString(PyExc_RuntimeError,"suppressionmodule.c: Error creating a thread.\n");
+			printf("ERROR: supression_nonmaxsup_surf: Unable to create a thread.\n");
+			return NULL;
+		}
+	}
+
+
+	// Wait for all workers
+	for (i=0; i<nth; i++) {
+		if (pthread_join(threads[i],NULL)) {
+			PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error waiting the thread termination.\n");
+			printf("ERROR: supression_nonmaxsup_surf: Fail waiting the thread termination.\n");
+			return NULL;
+		}
+	}
+
+	//Creating numpy matrix from C
+	PyObject* F_array = PyArray_SimpleNewFromData(1, &mn, NPY_UINT32, tomo.F);
+	if (F_array == NULL) {
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix F.\n");
+        printf("ERROR: supression_nonmaxsup_surf: Fail to create NumPy Matrix F.\n");
+        return NULL;
+    }
+	PyArray_ENABLEFLAGS((PyArrayObject*)F_array, NPY_ARRAY_OWNDATA);
+
+	return F_array;
+
+}
+
+static PyObject * supression_nonmaxsup_line(PyObject *self, PyObject *args)
 {	//Inputs
 	PyObject* I_array;//double
 	PyObject* V1x_array;//double
@@ -103,7 +348,7 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 
 	
 	if (!PyArg_ParseTuple(args,"OOOOOOOOO",&I_array,&V1x_array,&V1y_array,&V1z_array,&V2x_array,&V2y_array,&V2z_array,&M_array,&dim_array)){
-	    printf("ERROR: nonmaxsup: Unable to load inputs.\n");
+	    printf("ERROR: supression_nonmaxsup_line: Unable to load inputs.\n");
 	    PyErr_SetString(PyExc_TypeError, "Unable to load inputs.\n");
 		return NULL;}
 
@@ -111,63 +356,63 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (I_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform I in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform I in a NumPy Matrix.\n");
         return NULL;
     }
 
 	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V1x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform V1x in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform V1x in a NumPy Matrix.\n");
         return NULL;
     }
 
 	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V1y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform V1y in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform V1y in a NumPy Matrix.\n");
         return NULL;
     }
 
 	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V1z_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform V1z in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform V1z in a NumPy Matrix.\n");
         return NULL;
     }
 
 	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V2x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2x in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform V2x in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform V2x in a NumPy Matrix.\n");
         return NULL;
     }
 
 	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2y in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform V2y in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform V2y in a NumPy Matrix.\n");
         return NULL;
     }
 
 	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2z in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform V2z in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform V2z in a NumPy Matrix.\n");
         return NULL;
     }
 
 	PyArrayObject* M_np_array = (PyArrayObject*)PyArray_FROM_OTF(M_array, NPY_INT64, NPY_ARRAY_IN_ARRAY);
 	if (M_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming M in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform M in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform M in a NumPy Matrix.\n");
         return NULL;
     }
 
 	PyArrayObject* dim_np_array = (PyArrayObject*)PyArray_FROM_OTF(dim_array, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
 	if (dim_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming dim in a NumPy matrix.\n");
-        printf("ERROR: nonmaxsup: Unable to transform dim in a NumPy Matrix.\n");
+        printf("ERROR: supression_nonmaxsup_line: Unable to transform dim in a NumPy Matrix.\n");
         return NULL;
     }
 
@@ -178,39 +423,39 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
     m=(int)mn;
 
     if (PyArray_DIMS(V1x_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_line: Dimensions mismatch.\n");
 		return NULL;
 
     }
 
     if (PyArray_DIMS(V1y_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_line: Dimensions mismatch.\n");
 		return NULL;
     }
 
     if (PyArray_DIMS(V1z_np_array)[0]!=m){
         PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_line: Dimensions mismatch.\n");
 		return NULL;
     }
 
     if (PyArray_DIMS(V2x_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_line: Dimensions mismatch.\n");
 		return NULL;
     }
 
     if (PyArray_DIMS(V2y_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_line: Dimensions mismatch.\n");
 		return NULL;
     }
 
     if (PyArray_DIMS(V2z_np_array)[0]!=m){
-        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
-		printf("ERROR: nonmaxsup: Dimensions mismatch.\n");
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_line: Dimensions mismatch.\n");
 		return NULL;
     }
 
@@ -218,12 +463,10 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
     mhn=PyArray_DIMS(M_np_array)[0];
     mh=(int)mhn;
 	if (mh>m){
-		PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Mask dimensions mismatch.\n");
-		printf("ERROR: nonmaxsup: Mask dimensions mismatch.\n");
+		PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Mask dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_line: Mask dimensions mismatch.\n");
 		return NULL;
 	}
-
-
 
 
 	//Saving data in C
@@ -245,21 +488,20 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 	// Get computer information to set the number of thread and the size of buffers
 	num_threads = (int)sysconf(_SC_NPROCESSORS_ONLN);
 	if (num_threads<1) {
-		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: No active cpu detected.\n");
-		printf("ERROR: nonmaxsup: No active cpu detected.\n");
+		PyErr_SetString(PyExc_RuntimeError,"suppresionmodule.c: No active CPU found..\n");
+		printf("ERROR: supression_nonmaxsup_line: No active CPU found..\n");
 		return NULL;
 	}
 
 	//num_threads=1;
 	dat64 = get_cache_size();
 	if (dat64<1) {
-		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: No Cache detected.\n");
-		printf("ERROR: nonmaxsup: No Cache detected.\n");
+		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: Unable to get cache size.\n");
+		printf("ERROR: supression_nonmaxsup_line: Unable to get cache size.\n");
 		return NULL;
 	}
 	task_size = ceil( (CACHE_USED*dat64) / 18 );
 
-	
 	
 	ld = mh;
 
@@ -267,7 +509,7 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 
 	F= (unsigned int*)malloc(m*sizeof(unsigned int));
 
-    Tomos tomo;
+    Tomos_line tomo;
     tomo.I=I;
     tomo.V1x=V1x;
     tomo.V1y=V1y;
@@ -295,17 +537,17 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 	lq = m;
 	sq = 0; // Task queue initialization
 	if (pthread_mutex_init( &mutex, NULL ) ){
-		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error creating the mutex.\n");
-		printf("ERROR: nonmaxsup: Unable to create the mutex.\n");
+		PyErr_SetString(PyExc_RuntimeError,"suppressionmodule.c: Error creating the mutex.\n");
+		printf("ERROR: supression_nonmaxsup_line: Unable to create the mutex.\n");
 		return NULL;
 	}
 
 	threads = (pthread_t*)malloc( nth*sizeof(pthread_t) );
 	for (i=0; i<nth; i++) {
 		// Update process queue pointers
-		if (pthread_create(&threads[i],NULL,&look_neigbourhood,&tomo)) {
-			PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error creating a thread.\n");
-			printf("ERROR: nonmaxsup: Unable to create a thread.\n");
+		if (pthread_create(&threads[i],NULL,&look_neigbourhood_line,&tomo)) {
+			PyErr_SetString(PyExc_RuntimeError,"suppressionmodule.c: Error creating a thread.\n");
+			printf("ERROR: supression_nonmaxsup_line: Unable to create a thread.\n");
 			return NULL;
 		}
 	}
@@ -315,7 +557,7 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 	for (i=0; i<nth; i++) {
 		if (pthread_join(threads[i],NULL)) {
 			PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error waiting the thread termination.\n");
-			printf("ERROR: nonmaxsup: Fail waiting the thread termination.\n");
+			printf("ERROR: supression_nonmaxsup_line: Fail waiting the thread termination.\n");
 			return NULL;
 		}
 	}
@@ -324,7 +566,7 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 	PyObject* F_array = PyArray_SimpleNewFromData(1, &mn, NPY_UINT32, tomo.F);
 	if (F_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix F.\n");
-        printf("ERROR: nonmaxsup: Fail to create NumPy Matrix F.\n");
+        printf("ERROR: supression_nonmaxsup_line: Fail to create NumPy Matrix F.\n");
         return NULL;
     }
 	PyArray_ENABLEFLAGS((PyArrayObject*)F_array, NPY_ARRAY_OWNDATA);
@@ -332,6 +574,316 @@ static PyObject * supression_nonmaxsup(PyObject *self, PyObject *args)
 	return F_array;
 
 }
+
+static PyObject * supression_nonmaxsup_point(PyObject *self, PyObject *args)
+{	//Inputs
+	PyObject* I_array;//double
+	PyObject* V1x_array;//double
+	PyObject* V1y_array;//double
+	PyObject* V1z_array;//double
+	PyObject* V2x_array;//double
+	PyObject* V2y_array;//double
+	PyObject* V2z_array;//double
+	PyObject* V3x_array;//double
+	PyObject* V3y_array;//double
+	PyObject* V3z_array;//double
+	PyObject* M_array;//long long int
+	PyObject* dim_array;//unsigned int
+
+
+
+	//Auxiliar variables
+	int i, nta, nth, num_threads;
+	//int type;
+	int m, mh;
+	npy_intp mn, mhn;
+	//size_t len, len64;
+	long long int dat64;
+	pthread_t* threads;
+	//int sq, lq, ld, task_size;
+	//pthread_mutex_t mutex;
+
+	unsigned int* F ;
+
+
+
+
+	if (!PyArg_ParseTuple(args,"OOOOOOOOO000",&I_array,&V1x_array,&V1y_array,&V1z_array,&V2x_array,&V2y_array,&V2z_array,&V3x_array,&V3y_array,&V3z_array,&M_array,&dim_array)){
+	    printf("ERROR: supression_nonmaxsup_line: Unable to load inputs.\n");
+	    PyErr_SetString(PyExc_TypeError, "Unable to load inputs.\n");
+		return NULL;}
+
+	//Transform to NumPy matrix
+	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (I_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform I in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V1x_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V1x in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V1y_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V1y in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V1z_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V1z in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V2x_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V2x in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V2x in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V2y_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V2y in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V2y in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V2y_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V2z in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V2z in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+    PyArrayObject* V3x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3x_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V3x_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V3x in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V3x in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V3y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3y_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V3y_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V3y in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V3y in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* V3z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3z_array, NPY_DOUBLE,NPY_ARRAY_IN_ARRAY);
+	if (V3y_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming V3z in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform V3z in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* M_np_array = (PyArrayObject*)PyArray_FROM_OTF(M_array, NPY_INT64, NPY_ARRAY_IN_ARRAY);
+	if (M_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming M in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform M in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+	PyArrayObject* dim_np_array = (PyArrayObject*)PyArray_FROM_OTF(dim_array, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
+	if (dim_np_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Error transforming dim in a NumPy matrix.\n");
+        printf("ERROR: supression_nonmaxsup_point: Unable to transform dim in a NumPy Matrix.\n");
+        return NULL;
+    }
+
+
+    //Checking dimensions
+
+    mn= PyArray_DIMS(I_np_array)[0];
+    m=(int)mn;
+
+    if (PyArray_DIMS(V1x_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+
+    }
+
+    if (PyArray_DIMS(V1y_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V1z_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"nonmaxsup_stub_single.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V2x_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V2y_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V2z_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V3x_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V3y_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+    if (PyArray_DIMS(V3z_np_array)[0]!=m){
+        PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Dimensions mismatch.\n");
+		return NULL;
+    }
+
+
+    mhn=PyArray_DIMS(M_np_array)[0];
+    mh=(int)mhn;
+	if (mh>m){
+		PyErr_SetString(PyExc_ValueError,"supressionmodule.c: Mask dimensions mismatch.\n");
+		printf("ERROR: supression_nonmaxsup_point: Mask dimensions mismatch.\n");
+		return NULL;
+	}
+
+
+	//Saving data in C
+	double* I =(double*)PyArray_DATA(I_np_array);
+	double* V1x=(double*)PyArray_DATA(V1x_np_array);
+	double* V1y=(double*)PyArray_DATA(V1y_np_array);
+	double* V1z=(double*)PyArray_DATA(V1z_np_array);
+	double* V2x=(double*)PyArray_DATA(V2x_np_array);
+	double* V2y=(double*)PyArray_DATA(V2y_np_array);
+	double* V2z=(double*)PyArray_DATA(V2z_np_array);
+	double* V3x=(double*)PyArray_DATA(V3x_np_array);
+	double* V3y=(double*)PyArray_DATA(V3y_np_array);
+	double* V3z=(double*)PyArray_DATA(V3z_np_array);
+	long long int* M=(long long int*)PyArray_DATA(M_np_array);
+	unsigned int* dim=(unsigned int*)PyArray_DATA(dim_np_array);
+
+	//Free memory
+	Py_XDECREF(I_np_array);
+	Py_XDECREF(V1x_np_array); Py_XDECREF(V1y_np_array); Py_XDECREF(V1z_np_array);
+	Py_XDECREF(V2x_np_array); Py_XDECREF(V2y_np_array); Py_XDECREF(V2z_np_array);
+	Py_XDECREF(V3x_np_array); Py_XDECREF(V3y_np_array); Py_XDECREF(V3z_np_array);
+	Py_XDECREF(M_np_array);
+	Py_XDECREF(dim_np_array);
+
+	// Get computer information to set the number of thread and the size of buffers
+	num_threads = (int)sysconf(_SC_NPROCESSORS_ONLN);
+	if (num_threads<1) {
+		PyErr_SetString(PyExc_RuntimeError,"suppresionmodule.c: No active CPU found..\n");
+		printf("ERROR: supression_nonmaxsup_point: No active CPU found..\n");
+		return NULL;
+	}
+
+	//num_threads=1;
+	dat64 = get_cache_size();
+	if (dat64<1) {
+		PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub_single.cpp: Unable to get cache size.\n");
+		printf("ERROR: supression_nonmaxsup_point: Unable to get cache size.\n");
+		return NULL;
+	}
+	task_size = ceil( (CACHE_USED*dat64) / 18 );
+
+
+	ld = mh;
+
+	// Create the array for holding the output result
+
+	F= (unsigned int*)malloc(m*sizeof(unsigned int));
+
+    Tomos_point tomo;
+    tomo.I=I;
+    tomo.V1x=V1x;
+    tomo.V1y=V1y;
+    tomo.V1z=V1z;
+    tomo.V2x=V2x;
+    tomo.V2y=V2y;
+    tomo.V2z=V2z;
+    tomo.V3x=V3x;
+    tomo.V3y=V3y;
+    tomo.V3z=V3z;
+    tomo.M=M;
+    tomo.dim=dim;
+
+    tomo.F=F;
+
+	// Assign pointers to data
+
+
+	// Set pointer for initial splitting
+	nta = (float)m / task_size;
+	nta = ceil( nta );
+	nth = num_threads;
+	if (nta<nth) {
+		nth = nta;
+	}
+
+	// Throw the workers
+	lq = m;
+	sq = 0; // Task queue initialization
+	if (pthread_mutex_init( &mutex, NULL ) ){
+		PyErr_SetString(PyExc_RuntimeError,"suppressionmodule.c: Error creating the mutex.\n");
+		printf("ERROR: supression_nonmaxsup_point: Unable to create the mutex.\n");
+		return NULL;
+	}
+
+	threads = (pthread_t*)malloc( nth*sizeof(pthread_t) );
+	for (i=0; i<nth; i++) {
+		// Update process queue pointers
+		if (pthread_create(&threads[i],NULL,&look_neigbourhood_point,&tomo)) {
+			PyErr_SetString(PyExc_RuntimeError,"suppressionmodule.c: Error creating a thread.\n");
+			printf("ERROR: supression_nonmaxsup_point: Unable to create a thread.\n");
+			return NULL;
+		}
+	}
+
+
+	// Wait for all workers
+	for (i=0; i<nth; i++) {
+		if (pthread_join(threads[i],NULL)) {
+			PyErr_SetString(PyExc_RuntimeError,"nonmaxsup_stub.c: Error waiting the thread termination.\n");
+			printf("ERROR: supression_nonmaxsup_point: Fail waiting the thread termination.\n");
+			return NULL;
+		}
+	}
+
+	//Creating numpy matrix from C
+	PyObject* F_array = PyArray_SimpleNewFromData(1, &mn, NPY_UINT32, tomo.F);
+	if (F_array == NULL) {
+        PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix F.\n");
+        printf("ERROR: supression_nonmaxsup_point: Fail to create NumPy Matrix F.\n");
+        return NULL;
+    }
+	PyArray_ENABLEFLAGS((PyArrayObject*)F_array, NPY_ARRAY_OWNDATA);
+
+	return F_array;
+
+}
+
 typedef struct{
 	    //Inputs
 	    double* Ixx;
@@ -1121,8 +1673,265 @@ static int dsyevc3(double A[3][3], double w[3])
 	return 0;
 }
 
-// Thread for measuring the intermediate neighbour value
-static void* look_neigbourhood( void* ptr ){
+
+// Thread for measuring the intermediate neighbour value for surfaces
+static void* look_neigbourhood_surf( void* ptr ){
+
+
+    typedef struct{
+//inputs
+    double* I;
+	double* V1x;
+	double* V1y;
+	double* V1z;
+	long long int* M;
+	unsigned int* dim;
+
+    //Output
+	unsigned int* F ;
+    }Tomos;
+
+	int i, j, k;
+	unsigned int mx, my ;
+	//unsigned int *dim;
+	int sz, start, end;
+	double lv1, hold1, k1x, k1y, k1z;
+	double* A1[8];
+	double* B1[8];
+	double* V1a;
+	double* V1b;
+	double** K1;
+	unsigned char lock = 0x01;
+	Tomos* tomo = (Tomos*)ptr;
+	double* I = tomo->I;
+	double* V1x = tomo->V1x;
+	double* V1y = tomo->V1y;
+	double* V1z = tomo->V1z;
+	long long int* M = tomo->M;
+	unsigned int* dim = tomo->dim;
+	mx = dim[0];
+	my = dim[1];
+
+	// Buffers initialization
+	sz = task_size * sizeof(double);
+	for (i=0; i<8; i++) {
+		A1[i] = (double*)malloc( sz );
+		B1[i] = (double*)malloc( sz );
+	}
+	V1a = (double*)malloc( sz );
+	V1b = (double*)malloc( sz );
+	K1 = (double**)malloc( 3*sizeof(double*) );
+	for (i=0; i<3; i++) {
+		K1[i] = (double*)malloc( sz );
+	}
+
+	// Task loop
+	do{
+		// Update pointers
+		pthread_mutex_lock( &mutex );
+		start = sq;
+		sq = start + task_size;
+		if (sq>=ld) {
+			sq = ld;
+			lock = 0x00;
+		}
+		end = sq;
+		pthread_mutex_unlock( &mutex );
+
+		// Prepare data for every coordinate
+		j = 0;
+		for (k=start; k<end; k++) {
+
+			i = M[k];
+			//printf("k=%d, i=%d, j=%d\n",k,i,j);
+
+			lv1 = I[i];
+			//printf("I[%d] vale %f\n",i,I[i]);
+			//printf("lv1 vale %f\n",lv1);
+
+			K1[0][j] = fabs( V1x[i] * INTER_FACTOR );
+			K1[1][j] = fabs( V1y[i] * INTER_FACTOR );
+			K1[2][j] = fabs( V1z[i] * INTER_FACTOR );
+
+			//printf("V1x[0] vale %f\n",V1x[0]);
+	        //printf("V1y[0] vale %f\n",V1y[0]);
+	        //printf("V1z[0] vale %f\n",V1z[0]);
+	        //printf("K1[0][j] vale %f\n",K1[0][j]);
+	        //printf("K1[1][j] vale %f\n",K1[1][j]);
+	        //printf("K1[2][j] vale %f\n",K1[2][j]);
+
+			A1[0][j] = lv1;
+			B1[0][j] = lv1;
+			if (V1x[i]>=0) {
+				A1[1][j] = I[i+mx*my];
+				B1[1][j] = I[i-mx*my];
+				if ( (V1y[i]>=0) && (V1z[i]>=0) ) {
+					A1[2][j] = I[i+mx];
+					A1[3][j] = I[i+mx*(my+1)];
+					A1[4][j] = I[i+1];
+					A1[5][j] = I[i+mx*my+1];
+					A1[6][j] = I[i+mx+1];
+					A1[7][j] = I[i+mx*(my+1)+1];
+					B1[2][j] = I[i-mx];
+					B1[3][j] = I[i-mx*(my+1)];
+					B1[4][j] = I[i-1];
+					B1[5][j] = I[i-mx*my-1];
+					B1[6][j] = I[i-mx-1];
+					B1[7][j] = I[i-mx*(my+1)-1];
+				}else if ( (V1y[i]<0) && (V1z[i]>=0) ) {
+					A1[2][j] = I[i-mx];
+					A1[3][j] = I[i+mx*(my-1)];
+					A1[4][j] = I[i+1];
+					A1[5][j] = I[i+mx*my+1];
+					A1[6][j] = I[i-mx+1];
+					A1[7][j] = I[i+mx*(my-1)+1];
+					B1[2][j] = I[i+mx];
+					B1[3][j] = I[i-mx*(my-1)];
+					B1[4][j] = I[i-1];
+					B1[5][j] = I[i-mx*my-1];
+					B1[6][j] = I[i+mx-1];
+					B1[7][j] = I[i-mx*(my-1)-1];
+				}else if ( (V1y[i]>=0) && (V1z[i]<0) ) {
+					A1[2][j] = I[i+mx];
+					A1[3][j] = I[i+mx*(my+1)];
+					A1[4][j] = I[i+1];
+					A1[5][j] = I[i+mx*my+1];
+					A1[6][j] = I[i+mx+1];
+					A1[7][j] = I[i+mx*(my+1)+1];
+					B1[2][j] = I[i-mx];
+					B1[3][j] = I[i-mx*(my+1)];
+					B1[4][j] = I[i-1];
+					B1[5][j] = I[i-mx*my-1];
+					B1[6][j] = I[i-mx-1];
+					B1[7][j] = I[i-mx*(my+1)-1];
+				}else {
+					A1[2][j] = I[i-mx];
+					A1[3][j] = I[i+mx*(my-1)];
+					A1[4][j] = I[i+1];
+					A1[5][j] = I[i+mx*my+1];
+					A1[6][j] = I[i-mx+1];
+					A1[7][j] = I[i+mx*(my-1)+1];
+					B1[2][j] = I[i+mx];
+					B1[3][j] = I[i-mx*(my-1)];
+					B1[4][j] = I[i-1];
+					B1[5][j] = I[i-mx*my-1];
+					B1[6][j] = I[i+mx-1];
+					B1[7][j] = I[i-mx*(my-1)-1];
+				}
+			}else {
+				A1[1][j] = I[i-mx*my];
+				B1[1][j] = I[i+mx*my];
+				if ( (V1y[i]>=0) && (V1z[i]>=0) ) {
+					A1[2][j] = I[i+mx];
+					A1[3][j] = I[i-mx*(my-1)];
+					A1[4][j] = I[i-1];
+					A1[5][j] = I[i-mx*my-1];
+					A1[6][j] = I[i+mx-1];
+					A1[7][j] = I[i-mx*(my-1)-1];
+					B1[2][j] = I[i-mx];
+					B1[3][j] = I[i+mx*(my-1)];
+					B1[4][j] = I[i+1];
+					B1[5][j] = I[i+mx*my+1];
+					B1[6][j] = I[i-mx+1];
+					B1[7][j] = I[i+mx*(my-1)+1];
+				}else if ( (V1y[i]<0) && (V1z[i]>=0) ) {
+					A1[2][j] = I[i-mx];
+					A1[3][j] = I[i-mx*(my+1)];
+					A1[4][j] = I[i-1];
+					A1[5][j] = I[i-mx*my-1];
+					A1[6][j] = I[i-mx-1];
+					A1[7][j] = I[i-mx*(my+1)-1];
+					B1[2][j] = I[i+mx];
+					B1[3][j] = I[i+mx*(my+1)];
+					B1[4][j] = I[i+1];
+					B1[5][j] = I[i+mx*my+1];
+					B1[6][j] = I[i+mx+1];
+					B1[7][j] = I[i+mx*(my+1)+1];
+				}else if ( (V1y[i]>=0) && (V1z[i]<0) ) {
+					A1[2][j] = I[i+mx];
+					A1[3][j] = I[i-mx*(my-1)];
+					A1[4][j] = I[i-1];
+					A1[5][j] = I[i-mx*my-1];
+					A1[6][j] = I[i+mx-1];
+					A1[7][j] = I[i-mx*(my-1)-1];
+					B1[2][j] = I[i-mx];
+					B1[3][j] = I[i+mx*(my-1)];
+					B1[4][j] = I[i+1];
+					B1[5][j] = I[i+mx*my+1];
+					B1[6][j] = I[i-mx+1];
+					B1[7][j] = I[i+mx*(my-1)+1];
+				}else {
+					A1[2][j] = I[i-mx];
+					A1[3][j] = I[i-mx*(my+1)];
+					A1[4][j] = I[i-1];
+					A1[5][j] = I[i-mx*my-1];
+					A1[6][j] = I[i-mx-1];
+					A1[7][j] = I[i-mx*(my+1)-1];
+					B1[2][j] = I[i+mx];
+					B1[3][j] = I[i+mx*(my+1)];
+					B1[4][j] = I[i+1];
+					B1[5][j] = I[i+mx*my+1];
+					B1[6][j] = I[i+mx+1];
+					B1[7][j] = I[i+mx*(my+1)+1];
+				}
+			}
+
+		j++;}
+
+		// Trilinear interpolation
+		for (j=0; j<(end-start); j++) {
+			k1x = K1[0][j];
+			k1y = K1[1][j];
+			k1z = K1[2][j];
+			hold1 = A1[0][j]*(1-k1x)*(1-k1y)*(1-k1z);
+			hold1 = hold1 + A1[4][j]*k1x*(1-k1y)*(1-k1z);
+			hold1 = hold1 + A1[2][j]*(1-k1x)*k1y*(1-k1z);
+			hold1 = hold1 + A1[1][j]*(1-k1x)*(1-k1y)*k1z;
+			hold1 = hold1 + A1[5][j]*k1x*(1-k1y)*k1z;
+			hold1 = hold1 + A1[3][j]*(1-k1x)*k1y*k1z;
+			hold1 = hold1 + A1[6][j]*k1x*k1y*(1-k1z);
+			V1a[j] = hold1 + A1[7][j]*k1x*k1y*k1z;
+			//printf("V1a[j]=%f\n",V1a[j]);
+		}
+		for (j=0; j<(end-start); j++) {
+			k1x = K1[0][j];
+			k1y = K1[1][j];
+			k1z = K1[2][j];
+			hold1 = B1[0][j]*(1-k1x)*(1-k1y)*(1-k1z);
+			hold1 = hold1 + B1[4][j]*k1x*(1-k1y)*(1-k1z);
+			hold1 = hold1 + B1[2][j]*(1-k1x)*k1y*(1-k1z);
+			hold1 = hold1 + B1[1][j]*(1-k1x)*(1-k1y)*k1z;
+			hold1 = hold1 + B1[5][j]*k1x*(1-k1y)*k1z;
+			hold1 = hold1 + B1[3][j]*(1-k1x)*k1y*k1z;
+			hold1 = hold1 + B1[6][j]*k1x*k1y*(1-k1z);
+			V1b[j] = hold1 + B1[7][j]*k1x*k1y*k1z;
+
+			//printf("V1b[j]=%f\n",V1b[j]);
+		}
+
+
+		// Mark local maxima
+		j = 0;
+		for (k=start; k<end; k++) {
+			i = M[k];
+
+			lv1 = I[i];
+			if ( (lv1>V1a[j]) && (lv1>V1b[j]) ) {
+
+				tomo->F[i] = 1;
+
+			}
+
+		j++;}
+
+	}while(lock);
+
+	pthread_exit(0);
+}
+
+
+// Thread for measuring the intermediate neighbour value for lines
+static void* look_neigbourhood_line( void* ptr ){
 
 
     typedef struct{
@@ -1386,8 +2195,8 @@ static void* look_neigbourhood( void* ptr ){
 			K2[0][j] = fabs( V2x[i] * INTER_FACTOR );
 			K2[1][j] = fabs( V2y[i] * INTER_FACTOR );
 			K2[2][j] = fabs( V2z[i] * INTER_FACTOR );
-			A1[0][j] = lv2;
-			B1[0][j] = lv2;
+			A2[0][j] = lv2;
+			B2[0][j] = lv2;
 			if (V2x[i]>=0) {
 				A2[1][j] = I[i+mx*my];
 				B2[1][j] = I[i-mx*my];
@@ -1513,8 +2322,8 @@ static void* look_neigbourhood( void* ptr ){
 			hold2 = hold2 + A2[4][j]*k2x*(1-k2y)*(1-k2z);
 			hold2 = hold2 + A2[2][j]*(1-k2x)*k2y*(1-k2z);
 			hold2 = hold2 + A2[1][j]*(1-k2x)*(1-k2y)*k2z;
-			hold2 = hold2 + A2[5][j]*k1x*(1-k1y)*k1z;
-			hold2 = hold2 + A2[3][j]*(1-k1x)*k1y*k1z;
+			hold2 = hold2 + A2[5][j]*k2x*(1-k2y)*k2z;
+			hold2 = hold2 + A2[3][j]*(1-k2x)*k2y*k2z;
 			hold2 = hold2 + A2[6][j]*k2x*k2y*(1-k2z);
 			V2a[j] = hold2 + A2[7][j]*k2x*k2y*k2z;			
 		}
@@ -1552,6 +2361,612 @@ static void* look_neigbourhood( void* ptr ){
 }
 
 
+// Thread for measuring the intermediate neighbour value for blobs (points)
+static void* look_neigbourhood_point( void* ptr ){
+
+
+    typedef struct{
+//inputs
+    double* I;
+	double* V1x;
+	double* V1y;
+	double* V1z;
+	double* V2x;
+	double* V2y;
+	double* V2z;
+	double* V3x;
+	double* V3y;
+	double* V3z;
+	long long int* M;
+	unsigned int* dim;
+
+    //Output
+	unsigned int* F ;
+    }Tomos;
+
+	int i, j, k;
+	unsigned int mx, my ;
+	//unsigned int *dim;
+	int sz, start, end;
+	double lv1, hold1, k1x, k1y, k1z;
+	double lv2, hold2, k2x, k2y, k2z;
+	double lv3, hold3, k3x, k3y, k3z;
+	double* A1[8];
+	double* B1[8];
+	double* A2[8];
+	double* B2[8];
+	double* A3[8];
+	double* B3[8];
+	double* V1a;
+	double* V1b;
+	double* V2a;
+	double* V2b;
+	double* V3a;
+	double* V3b;
+	double** K1;
+	double** K2;
+	double** K3;
+	unsigned char lock = 0x01;
+	Tomos* tomo = (Tomos*)ptr;
+	double* I = tomo->I;
+	double* V1x = tomo->V1x;
+	double* V1y = tomo->V1y;
+	double* V1z = tomo->V1z;
+	double* V2x = tomo->V2x;
+	double* V2y = tomo->V2y;
+	double* V2z = tomo->V2z;
+	double* V3x = tomo->V3x;
+	double* V3y = tomo->V3y;
+	double* V3z = tomo->V3z;
+	long long int* M = tomo->M;
+	unsigned int* dim = tomo->dim;
+	mx = dim[0];
+	my = dim[1];
+
+	// Buffers initialization
+	sz = task_size * sizeof(double);
+	for (i=0; i<8; i++) {
+		A1[i] = (double*)malloc( sz );
+		B1[i] = (double*)malloc( sz );
+		A2[i] = (double*)malloc( sz );
+		B2[i] = (double*)malloc( sz );
+		A3[i] = (double*)malloc( sz );
+		B3[i] = (double*)malloc( sz );
+	}
+	V1a = (double*)malloc( sz );
+	V1b = (double*)malloc( sz );
+	K1 = (double**)malloc( 3*sizeof(double*) );
+	V2a = (double*)malloc( sz );
+	V2b = (double*)malloc( sz );
+	K2 = (double**)malloc( 3*sizeof(double*) );
+	V3a = (double*)malloc( sz );
+	V3b = (double*)malloc( sz );
+	K3 = (double**)malloc( 3*sizeof(double*) );
+	for (i=0; i<3; i++) {
+		K1[i] = (double*)malloc( sz );
+		K2[i] = (double*)malloc( sz );
+		K3[i] = (double*)malloc( sz );
+	}
+
+	// Task loop
+	do{
+		// Update pointers
+		pthread_mutex_lock( &mutex );
+		start = sq;
+		sq = start + task_size;
+		if (sq>=ld) {
+			sq = ld;
+			lock = 0x00;
+		}
+		end = sq;
+		pthread_mutex_unlock( &mutex );
+
+		// Prepare data for every coordinate for eigenvector V1
+		j = 0;
+		for (k=start; k<end; k++) {
+
+			i = M[k];
+			//printf("k=%d, i=%d, j=%d\n",k,i,j);
+
+			lv1 = I[i];
+			//printf("I[%d] vale %f\n",i,I[i]);
+			//printf("lv1 vale %f\n",lv1);
+
+			K1[0][j] = fabs( V1x[i] * INTER_FACTOR );
+			K1[1][j] = fabs( V1y[i] * INTER_FACTOR );
+			K1[2][j] = fabs( V1z[i] * INTER_FACTOR );
+
+			//printf("V1x[0] vale %f\n",V1x[0]);
+	        //printf("V1y[0] vale %f\n",V1y[0]);
+	        //printf("V1z[0] vale %f\n",V1z[0]);
+	        //printf("K1[0][j] vale %f\n",K1[0][j]);
+	        //printf("K1[1][j] vale %f\n",K1[1][j]);
+	        //printf("K1[2][j] vale %f\n",K1[2][j]);
+
+			A1[0][j] = lv1;
+			B1[0][j] = lv1;
+			if (V1x[i]>=0) {
+				A1[1][j] = I[i+mx*my];
+				B1[1][j] = I[i-mx*my];
+				if ( (V1y[i]>=0) && (V1z[i]>=0) ) {
+					A1[2][j] = I[i+mx];
+					A1[3][j] = I[i+mx*(my+1)];
+					A1[4][j] = I[i+1];
+					A1[5][j] = I[i+mx*my+1];
+					A1[6][j] = I[i+mx+1];
+					A1[7][j] = I[i+mx*(my+1)+1];
+					B1[2][j] = I[i-mx];
+					B1[3][j] = I[i-mx*(my+1)];
+					B1[4][j] = I[i-1];
+					B1[5][j] = I[i-mx*my-1];
+					B1[6][j] = I[i-mx-1];
+					B1[7][j] = I[i-mx*(my+1)-1];
+				}else if ( (V1y[i]<0) && (V1z[i]>=0) ) {
+					A1[2][j] = I[i-mx];
+					A1[3][j] = I[i+mx*(my-1)];
+					A1[4][j] = I[i+1];
+					A1[5][j] = I[i+mx*my+1];
+					A1[6][j] = I[i-mx+1];
+					A1[7][j] = I[i+mx*(my-1)+1];
+					B1[2][j] = I[i+mx];
+					B1[3][j] = I[i-mx*(my-1)];
+					B1[4][j] = I[i-1];
+					B1[5][j] = I[i-mx*my-1];
+					B1[6][j] = I[i+mx-1];
+					B1[7][j] = I[i-mx*(my-1)-1];
+				}else if ( (V1y[i]>=0) && (V1z[i]<0) ) {
+					A1[2][j] = I[i+mx];
+					A1[3][j] = I[i+mx*(my+1)];
+					A1[4][j] = I[i+1];
+					A1[5][j] = I[i+mx*my+1];
+					A1[6][j] = I[i+mx+1];
+					A1[7][j] = I[i+mx*(my+1)+1];
+					B1[2][j] = I[i-mx];
+					B1[3][j] = I[i-mx*(my+1)];
+					B1[4][j] = I[i-1];
+					B1[5][j] = I[i-mx*my-1];
+					B1[6][j] = I[i-mx-1];
+					B1[7][j] = I[i-mx*(my+1)-1];
+				}else {
+					A1[2][j] = I[i-mx];
+					A1[3][j] = I[i+mx*(my-1)];
+					A1[4][j] = I[i+1];
+					A1[5][j] = I[i+mx*my+1];
+					A1[6][j] = I[i-mx+1];
+					A1[7][j] = I[i+mx*(my-1)+1];
+					B1[2][j] = I[i+mx];
+					B1[3][j] = I[i-mx*(my-1)];
+					B1[4][j] = I[i-1];
+					B1[5][j] = I[i-mx*my-1];
+					B1[6][j] = I[i+mx-1];
+					B1[7][j] = I[i-mx*(my-1)-1];
+				}
+			}else {
+				A1[1][j] = I[i-mx*my];
+				B1[1][j] = I[i+mx*my];
+				if ( (V1y[i]>=0) && (V1z[i]>=0) ) {
+					A1[2][j] = I[i+mx];
+					A1[3][j] = I[i-mx*(my-1)];
+					A1[4][j] = I[i-1];
+					A1[5][j] = I[i-mx*my-1];
+					A1[6][j] = I[i+mx-1];
+					A1[7][j] = I[i-mx*(my-1)-1];
+					B1[2][j] = I[i-mx];
+					B1[3][j] = I[i+mx*(my-1)];
+					B1[4][j] = I[i+1];
+					B1[5][j] = I[i+mx*my+1];
+					B1[6][j] = I[i-mx+1];
+					B1[7][j] = I[i+mx*(my-1)+1];
+				}else if ( (V1y[i]<0) && (V1z[i]>=0) ) {
+					A1[2][j] = I[i-mx];
+					A1[3][j] = I[i-mx*(my+1)];
+					A1[4][j] = I[i-1];
+					A1[5][j] = I[i-mx*my-1];
+					A1[6][j] = I[i-mx-1];
+					A1[7][j] = I[i-mx*(my+1)-1];
+					B1[2][j] = I[i+mx];
+					B1[3][j] = I[i+mx*(my+1)];
+					B1[4][j] = I[i+1];
+					B1[5][j] = I[i+mx*my+1];
+					B1[6][j] = I[i+mx+1];
+					B1[7][j] = I[i+mx*(my+1)+1];
+				}else if ( (V1y[i]>=0) && (V1z[i]<0) ) {
+					A1[2][j] = I[i+mx];
+					A1[3][j] = I[i-mx*(my-1)];
+					A1[4][j] = I[i-1];
+					A1[5][j] = I[i-mx*my-1];
+					A1[6][j] = I[i+mx-1];
+					A1[7][j] = I[i-mx*(my-1)-1];
+					B1[2][j] = I[i-mx];
+					B1[3][j] = I[i+mx*(my-1)];
+					B1[4][j] = I[i+1];
+					B1[5][j] = I[i+mx*my+1];
+					B1[6][j] = I[i-mx+1];
+					B1[7][j] = I[i+mx*(my-1)+1];
+				}else {
+					A1[2][j] = I[i-mx];
+					A1[3][j] = I[i-mx*(my+1)];
+					A1[4][j] = I[i-1];
+					A1[5][j] = I[i-mx*my-1];
+					A1[6][j] = I[i-mx-1];
+					A1[7][j] = I[i-mx*(my+1)-1];
+					B1[2][j] = I[i+mx];
+					B1[3][j] = I[i+mx*(my+1)];
+					B1[4][j] = I[i+1];
+					B1[5][j] = I[i+mx*my+1];
+					B1[6][j] = I[i+mx+1];
+					B1[7][j] = I[i+mx*(my+1)+1];
+				}
+			}
+
+		j++;
+		}
+
+		// Trilinear interpolation for eigenvector V1
+		for (j=0; j<(end-start); j++) {
+			k1x = K1[0][j];
+			k1y = K1[1][j];
+			k1z = K1[2][j];
+			hold1 = A1[0][j]*(1-k1x)*(1-k1y)*(1-k1z);
+			hold1 = hold1 + A1[4][j]*k1x*(1-k1y)*(1-k1z);
+			hold1 = hold1 + A1[2][j]*(1-k1x)*k1y*(1-k1z);
+			hold1 = hold1 + A1[1][j]*(1-k1x)*(1-k1y)*k1z;
+			hold1 = hold1 + A1[5][j]*k1x*(1-k1y)*k1z;
+			hold1 = hold1 + A1[3][j]*(1-k1x)*k1y*k1z;
+			hold1 = hold1 + A1[6][j]*k1x*k1y*(1-k1z);
+			V1a[j] = hold1 + A1[7][j]*k1x*k1y*k1z;
+			//printf("V1a[j]=%f\n",V1a[j]);
+		}
+		for (j=0; j<(end-start); j++) {
+			k1x = K1[0][j];
+			k1y = K1[1][j];
+			k1z = K1[2][j];
+			hold1 = B1[0][j]*(1-k1x)*(1-k1y)*(1-k1z);
+			hold1 = hold1 + B1[4][j]*k1x*(1-k1y)*(1-k1z);
+			hold1 = hold1 + B1[2][j]*(1-k1x)*k1y*(1-k1z);
+			hold1 = hold1 + B1[1][j]*(1-k1x)*(1-k1y)*k1z;
+			hold1 = hold1 + B1[5][j]*k1x*(1-k1y)*k1z;
+			hold1 = hold1 + B1[3][j]*(1-k1x)*k1y*k1z;
+			hold1 = hold1 + B1[6][j]*k1x*k1y*(1-k1z);
+			V1b[j] = hold1 + B1[7][j]*k1x*k1y*k1z;
+
+			//printf("V1b[j]=%f\n",V1b[j]);
+		}
+
+
+		// Prepare data for every coordinate for eigenvector V2
+		j = 0;
+		for (k=start; k<end; k++) {
+			i = M[k];
+
+			lv2 = I[i];
+			K2[0][j] = fabs( V2x[i] * INTER_FACTOR );
+			K2[1][j] = fabs( V2y[i] * INTER_FACTOR );
+			K2[2][j] = fabs( V2z[i] * INTER_FACTOR );
+			A2[0][j] = lv2;
+			B2[0][j] = lv2;
+			if (V2x[i]>=0) {
+				A2[1][j] = I[i+mx*my];
+				B2[1][j] = I[i-mx*my];
+				if ( (V2y[i]>=0) && (V2z[i]>=0) ) {
+					A2[2][j] = I[i+mx];
+					A2[3][j] = I[i+mx*(my+1)];
+					A2[4][j] = I[i+1];
+					A2[5][j] = I[i+mx*my+1];
+					A2[6][j] = I[i+mx+1];
+					A2[7][j] = I[i+mx*(my+1)+1];
+					B2[2][j] = I[i-mx];
+					B2[3][j] = I[i-mx*(my+1)];
+					B2[4][j] = I[i-1];
+					B2[5][j] = I[i-mx*my-1];
+					B2[6][j] = I[i-mx-1];
+					B2[7][j] = I[i-mx*(my+1)-1];
+				}else if ( (V2y[i]<0) && (V2z[i]>=0) ) {
+					A2[2][j] = I[i-mx];
+					A2[3][j] = I[i+mx*(my-1)];
+					A2[4][j] = I[i+1];
+					A2[5][j] = I[i+mx*my+1];
+					A2[6][j] = I[i-mx+1];
+					A2[7][j] = I[i+mx*(my-1)+1];
+					B2[2][j] = I[i+mx];
+					B2[3][j] = I[i-mx*(my-1)];
+					B2[4][j] = I[i-1];
+					B2[5][j] = I[i-mx*my-1];
+					B2[6][j] = I[i+mx-1];
+					B2[7][j] = I[i-mx*(my-1)-1];
+				}else if ( (V2y[i]>=0) && (V2z[i]<0) ) {
+					A2[2][j] = I[i+mx];
+					A2[3][j] = I[i+mx*(my+1)];
+					A2[4][j] = I[i+1];
+					A2[5][j] = I[i+mx*my+1];
+					A2[6][j] = I[i+mx+1];
+					A2[7][j] = I[i+mx*(my+1)+1];
+					B2[2][j] = I[i-mx];
+					B2[3][j] = I[i-mx*(my+1)];
+					B2[4][j] = I[i-1];
+					B2[5][j] = I[i-mx*my-1];
+					B2[6][j] = I[i-mx-1];
+					B2[7][j] = I[i-mx*(my+1)-1];
+				}else {
+					A2[2][j] = I[i-mx];
+					A2[3][j] = I[i+mx*(my-1)];
+					A2[4][j] = I[i+1];
+					A2[5][j] = I[i+mx*my+1];
+					A2[6][j] = I[i-mx+1];
+					A2[7][j] = I[i+mx*(my-1)+1];
+					B2[2][j] = I[i+mx];
+					B2[3][j] = I[i-mx*(my-1)];
+					B2[4][j] = I[i-1];
+					B2[5][j] = I[i-mx*my-1];
+					B2[6][j] = I[i+mx-1];
+					B2[7][j] = I[i-mx*(my-1)-1];
+				}
+			}else {
+				A2[1][j] = I[i-mx*my];
+				B2[1][j] = I[i+mx*my];
+				if ( (V2y[i]>=0) && (V2z[i]>=0) ) {
+					A2[2][j] = I[i+mx];
+					A2[3][j] = I[i-mx*(my-1)];
+					A2[4][j] = I[i-1];
+					A2[5][j] = I[i-mx*my-1];
+					A2[6][j] = I[i+mx-1];
+					A2[7][j] = I[i-mx*(my-1)-1];
+					B2[2][j] = I[i-mx];
+					B2[3][j] = I[i+mx*(my-1)];
+					B2[4][j] = I[i+1];
+					B2[5][j] = I[i+mx*my+1];
+					B2[6][j] = I[i-mx+1];
+					B2[7][j] = I[i+mx*(my-1)+1];
+				}else if ( (V2y[i]<0) && (V2z[i]>=0) ) {
+					A2[2][j] = I[i-mx];
+					A2[3][j] = I[i-mx*(my+1)];
+					A2[4][j] = I[i-1];
+					A2[5][j] = I[i-mx*my-1];
+					A2[6][j] = I[i-mx-1];
+					A2[7][j] = I[i-mx*(my+1)-1];
+					B2[2][j] = I[i+mx];
+					B2[3][j] = I[i+mx*(my+1)];
+					B2[4][j] = I[i+1];
+					B2[5][j] = I[i+mx*my+1];
+					B2[6][j] = I[i+mx+1];
+					B2[7][j] = I[i+mx*(my+1)+1];
+				}else if ( (V2y[i]>=0) && (V2z[i]<0) ) {
+					A2[2][j] = I[i+mx];
+					A2[3][j] = I[i-mx*(my-1)];
+					A2[4][j] = I[i-1];
+					A2[5][j] = I[i-mx*my-1];
+					A2[6][j] = I[i+mx-1];
+					A2[7][j] = I[i-mx*(my-1)-1];
+					B2[2][j] = I[i-mx];
+					B2[3][j] = I[i+mx*(my-1)];
+					B2[4][j] = I[i+1];
+					B2[5][j] = I[i+mx*my+1];
+					B2[6][j] = I[i-mx+1];
+					B2[7][j] = I[i+mx*(my-1)+1];
+				}else {
+					A2[2][j] = I[i-mx];
+					A2[3][j] = I[i-mx*(my+1)];
+					A2[4][j] = I[i-1];
+					A2[5][j] = I[i-mx*my-1];
+					A2[6][j] = I[i-mx-1];
+					A2[7][j] = I[i-mx*(my+1)-1];
+					B2[2][j] = I[i+mx];
+					B2[3][j] = I[i+mx*(my+1)];
+					B2[4][j] = I[i+1];
+					B2[5][j] = I[i+mx*my+1];
+					B2[6][j] = I[i+mx+1];
+					B2[7][j] = I[i+mx*(my+1)+1];
+				}
+			}
+
+		j++;
+		}
+
+		// Trilinear interpolation for eigenvector V2
+		for (j=0; j<(end-start); j++) {
+			k2x = K2[0][j];
+			k2y = K2[1][j];
+			k2z = K2[2][j];
+			hold2 = A2[0][j]*(1-k2x)*(1-k2y)*(1-k2z);
+			hold2 = hold2 + A2[4][j]*k2x*(1-k2y)*(1-k2z);
+			hold2 = hold2 + A2[2][j]*(1-k2x)*k2y*(1-k2z);
+			hold2 = hold2 + A2[1][j]*(1-k2x)*(1-k2y)*k2z;
+			hold2 = hold2 + A2[5][j]*k2x*(1-k1y)*k2z;
+			hold2 = hold2 + A2[3][j]*(1-k2x)*k2y*k2z;
+			hold2 = hold2 + A2[6][j]*k2x*k2y*(1-k2z);
+			V2a[j] = hold2 + A2[7][j]*k2x*k2y*k2z;
+		}
+		for (j=0; j<(end-start); j++) {
+			k2x = K2[0][j];
+			k2y = K2[1][j];
+			k2z = K2[2][j];
+			hold2 = B2[0][j]*(1-k2x)*(1-k2y)*(1-k2z);
+			hold2 = hold2 + B2[4][j]*k2x*(1-k2y)*(1-k2z);
+			hold2 = hold2 + B2[2][j]*(1-k2x)*k2y*(1-k2z);
+			hold2 = hold2 + B2[1][j]*(1-k2x)*(1-k2y)*k2z;
+			hold2 = hold2 + B2[5][j]*k2x*(1-k2y)*k2z;
+			hold2 = hold2 + B2[3][j]*(1-k2x)*k2y*k2z;
+			hold2 = hold2 + B2[6][j]*k2x*k2y*(1-k2z);
+			V2b[j] = hold2 + B2[7][j]*k2x*k2y*k2z;
+		}
+
+		// Prepare data for every coordinate for eigenvector V3
+		j = 0;
+		for (k=start; k<end; k++) {
+			i = M[k];
+
+			lv3 = I[i];
+			K3[0][j] = fabs( V3x[i] * INTER_FACTOR );
+			K3[1][j] = fabs( V3y[i] * INTER_FACTOR );
+			K3[2][j] = fabs( V3z[i] * INTER_FACTOR );
+			A3[0][j] = lv3;
+			B3[0][j] = lv3;
+			if (V3x[i]>=0) {
+				A3[1][j] = I[i+mx*my];
+				B3[1][j] = I[i-mx*my];
+				if ( (V3y[i]>=0) && (V3z[i]>=0) ) {
+					A3[2][j] = I[i+mx];
+					A3[3][j] = I[i+mx*(my+1)];
+					A3[4][j] = I[i+1];
+					A3[5][j] = I[i+mx*my+1];
+					A3[6][j] = I[i+mx+1];
+					A3[7][j] = I[i+mx*(my+1)+1];
+					B3[2][j] = I[i-mx];
+					B3[3][j] = I[i-mx*(my+1)];
+					B3[4][j] = I[i-1];
+					B3[5][j] = I[i-mx*my-1];
+					B3[6][j] = I[i-mx-1];
+					B3[7][j] = I[i-mx*(my+1)-1];
+				}else if ( (V3y[i]<0) && (V3z[i]>=0) ) {
+					A3[2][j] = I[i-mx];
+					A3[3][j] = I[i+mx*(my-1)];
+					A3[4][j] = I[i+1];
+					A3[5][j] = I[i+mx*my+1];
+					A3[6][j] = I[i-mx+1];
+					A3[7][j] = I[i+mx*(my-1)+1];
+					B3[2][j] = I[i+mx];
+					B3[3][j] = I[i-mx*(my-1)];
+					B3[4][j] = I[i-1];
+					B3[5][j] = I[i-mx*my-1];
+					B3[6][j] = I[i+mx-1];
+					B3[7][j] = I[i-mx*(my-1)-1];
+				}else if ( (V3y[i]>=0) && (V3z[i]<0) ) {
+					A3[2][j] = I[i+mx];
+					A3[3][j] = I[i+mx*(my+1)];
+					A3[4][j] = I[i+1];
+					A3[5][j] = I[i+mx*my+1];
+					A3[6][j] = I[i+mx+1];
+					A3[7][j] = I[i+mx*(my+1)+1];
+					B3[2][j] = I[i-mx];
+					B3[3][j] = I[i-mx*(my+1)];
+					B3[4][j] = I[i-1];
+					B3[5][j] = I[i-mx*my-1];
+					B3[6][j] = I[i-mx-1];
+					B3[7][j] = I[i-mx*(my+1)-1];
+				}else {
+					A3[2][j] = I[i-mx];
+					A3[3][j] = I[i+mx*(my-1)];
+					A3[4][j] = I[i+1];
+					A3[5][j] = I[i+mx*my+1];
+					A3[6][j] = I[i-mx+1];
+					A3[7][j] = I[i+mx*(my-1)+1];
+					B3[2][j] = I[i+mx];
+					B3[3][j] = I[i-mx*(my-1)];
+					B3[4][j] = I[i-1];
+					B3[5][j] = I[i-mx*my-1];
+					B3[6][j] = I[i+mx-1];
+					B3[7][j] = I[i-mx*(my-1)-1];
+				}
+			}else {
+				A3[1][j] = I[i-mx*my];
+				B3[1][j] = I[i+mx*my];
+				if ( (V3y[i]>=0) && (V3z[i]>=0) ) {
+					A3[2][j] = I[i+mx];
+					A3[3][j] = I[i-mx*(my-1)];
+					A3[4][j] = I[i-1];
+					A3[5][j] = I[i-mx*my-1];
+					A3[6][j] = I[i+mx-1];
+					A3[7][j] = I[i-mx*(my-1)-1];
+					B3[2][j] = I[i-mx];
+					B3[3][j] = I[i+mx*(my-1)];
+					B3[4][j] = I[i+1];
+					B3[5][j] = I[i+mx*my+1];
+					B3[6][j] = I[i-mx+1];
+					B3[7][j] = I[i+mx*(my-1)+1];
+				}else if ( (V3y[i]<0) && (V3z[i]>=0) ) {
+					A3[2][j] = I[i-mx];
+					A3[3][j] = I[i-mx*(my+1)];
+					A3[4][j] = I[i-1];
+					A3[5][j] = I[i-mx*my-1];
+					A3[6][j] = I[i-mx-1];
+					A3[7][j] = I[i-mx*(my+1)-1];
+					B3[2][j] = I[i+mx];
+					B3[3][j] = I[i+mx*(my+1)];
+					B3[4][j] = I[i+1];
+					B3[5][j] = I[i+mx*my+1];
+					B3[6][j] = I[i+mx+1];
+					B3[7][j] = I[i+mx*(my+1)+1];
+				}else if ( (V3y[i]>=0) && (V3z[i]<0) ) {
+					A3[2][j] = I[i+mx];
+					A3[3][j] = I[i-mx*(my-1)];
+					A3[4][j] = I[i-1];
+					A3[5][j] = I[i-mx*my-1];
+					A3[6][j] = I[i+mx-1];
+					A3[7][j] = I[i-mx*(my-1)-1];
+					B3[2][j] = I[i-mx];
+					B3[3][j] = I[i+mx*(my-1)];
+					B3[4][j] = I[i+1];
+					B3[5][j] = I[i+mx*my+1];
+					B3[6][j] = I[i-mx+1];
+					B3[7][j] = I[i+mx*(my-1)+1];
+				}else {
+					A3[2][j] = I[i-mx];
+					A3[3][j] = I[i-mx*(my+1)];
+					A3[4][j] = I[i-1];
+					A3[5][j] = I[i-mx*my-1];
+					A3[6][j] = I[i-mx-1];
+					A3[7][j] = I[i-mx*(my+1)-1];
+					B3[2][j] = I[i+mx];
+					B3[3][j] = I[i+mx*(my+1)];
+					B3[4][j] = I[i+1];
+					B3[5][j] = I[i+mx*my+1];
+					B3[6][j] = I[i+mx+1];
+					B3[7][j] = I[i+mx*(my+1)+1];
+				}
+			}
+
+		j++;
+		}
+
+		// Trilinear interpolation for eigenvector V3
+		for (j=0; j<(end-start); j++) {
+			k3x = K3[0][j];
+			k3y = K3[1][j];
+			k3z = K3[2][j];
+			hold3 = A3[0][j]*(1-k3x)*(1-k3y)*(1-k3z);
+			hold3 = hold3 + A3[4][j]*k3x*(1-k3y)*(1-k3z);
+			hold3 = hold3 + A3[2][j]*(1-k3x)*k3y*(1-k3z);
+			hold3 = hold3 + A3[1][j]*(1-k3x)*(1-k3y)*k3z;
+			hold3 = hold3 + A3[5][j]*k3x*(1-k3y)*k3z;
+			hold3 = hold3 + A3[3][j]*(1-k3x)*k3y*k3z;
+			hold3 = hold3 + A3[6][j]*k3x*k3y*(1-k3z);
+			V3a[j] = hold3 + A3[7][j]*k3x*k3y*k3z;
+		}
+		for (j=0; j<(end-start); j++) {
+			k3x = K3[0][j];
+			k3y = K3[1][j];
+			k3z = K3[2][j];
+			hold3 = B3[0][j]*(1-k3x)*(1-k3y)*(1-k3z);
+			hold3 = hold3 + B3[4][j]*k3x*(1-k3y)*(1-k3z);
+			hold3 = hold3 + B3[2][j]*(1-k3x)*k3y*(1-k3z);
+			hold3 = hold3 + B3[1][j]*(1-k3x)*(1-k3y)*k3z;
+			hold3 = hold3 + B3[5][j]*k3x*(1-k3y)*k3z;
+			hold3 = hold3 + B3[3][j]*(1-k3x)*k3y*k3z;
+			hold3 = hold3 + B3[6][j]*k3x*k3y*(1-k3z);
+			V3b[j] = hold3 + B3[7][j]*k3x*k3y*k3z;
+		}
+
+		// Mark local maxima
+		j = 0;
+		for (k=start; k<end; k++) {
+			i = M[k];
+
+			lv1 = I[i];
+			if ( (lv1>V1a[j]) && (lv1>V1b[j]) && (lv1>V2a[j]) && (lv1>V2b[j]) && (lv1>V3a[j]) && (lv1>V3b[j]) ) {
+
+				tomo->F[i] = 1;
+
+			}
+
+		j++;
+		}
+
+	}while(lock);
+
+	pthread_exit(0);
+}
+
+
 // Get the cache size found in the first processor listed in /proc/cpuinfo in bytes 
 static long long int get_cache_size() 
 {
@@ -1585,7 +3000,9 @@ PyDoc_STRVAR(supression_doc, "Remove and return the rightmost element.");
 //Method table
 static PyMethodDef supressionMethods[]= {
     {"desyevv",supression_desyevv,METH_VARARGS,"Resolve eigenproblem mix method"},
-	{"nonmaxsup", supression_nonmaxsup,METH_VARARGS,"Execute supression of non maximums"},
+    {"nonmaxsup_2", supression_nonmaxsup_surf,METH_VARARGS,"Non-maximum suppression for surfaces"},
+	{"nonmaxsup_1", supression_nonmaxsup_line,METH_VARARGS,"Non-maximum suppression for lines"},
+	{"nonmaxsup_0", supression_nonmaxsup_point,METH_VARARGS,"Non-maximum suppression for points"},
 	{NULL,NULL,0,NULL}
 };
 

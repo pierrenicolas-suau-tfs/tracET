@@ -3,7 +3,7 @@ from supression import nonmaxsup,desyevv
 
 import sys, getopt, time
 from graph_uts import *
-from mt import lio
+from core import lio
 
 
 def angauss(I,s,r=1):
@@ -386,7 +386,7 @@ def main(argv):
 
     print('Saving')
     if os.path.splitext(out_tomo)[1] == '.mrc':
-        lio.write_mrc(P.astype(np.float32),out_tomo)
+        lio.write_mrc(P.astype(np.float32), out_tomo)
     else:
         nrrd.write(out_tomo,P)
 
