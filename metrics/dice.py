@@ -8,7 +8,7 @@ import scipy
 import numpy as np
 
 from core.diff import diff3d, nonmaxsup_surf, nonmaxsup_line, nonmaxsup_point
-from supression import desyevv
+from supression import desyevv, nonmaxsup_2
 
 
 def surface_skel(tomo: np.ndarray, mask=None) -> np.ndarray:
@@ -24,7 +24,6 @@ def surface_skel(tomo: np.ndarray, mask=None) -> np.ndarray:
         assert mask.shape == tomo.shape
 
     # 1st order derivatives
-    [Nx, Ny, Nz] = np.shape(tomo)
     tomo_x = diff3d(tomo, 0).astype(np.float32)
     tomo_y = diff3d(tomo, 1).astype(np.float32)
     tomo_z = diff3d(tomo, 2).astype(np.float32)
@@ -41,15 +40,29 @@ def surface_skel(tomo: np.ndarray, mask=None) -> np.ndarray:
     del tomo_z
 
     # C-processing eigen-problem
-    tomo_l1, _, _, tomo_v1x, tomo_v1y, tomo_v1z, _, _, _, _, _, _ = desyevv(tomo_xx, tomo_yy, tomo_zz,
+    _, _, _, tomo_v1x, tomo_v1y, tomo_v1z, _, _, _, _, _, _ = desyevv(tomo_xx, tomo_yy, tomo_zz,
                                                                             tomo_xy, tomo_xz, tomo_yz)
-    tomo_l1 = np.swapaxes(np.reshape(tomo_l1, (Nz, Ny, Nx)), 0, 2)
-    tomo_v1x = np.swapaxes(np.reshape(tomo_v1x, (Nz, Ny, Nx)), 0, 2)
-    tomo_v1y = np.swapaxes(np.reshape(tomo_v1y, (Nz, Ny, Nx)), 0, 2)
-    tomo_v1z = np.swapaxes(np.reshape(tomo_v1z, (Nz, Ny, Nx)), 0, 2)
+    del tomo_xx
+    del tomo_yy
+    del tomo_zz
+    del tomo_xy
+    del tomo_xz
+    del tomo_yz
 
     # Non-maximum suppression
-    return nonmaxsup_surf(tomo_l1, mask, tomo_v1x, tomo_v1y, tomo_v1z)
+    [Nx, Ny, Nz] = np.shape(tomo)
+    mask_h = np.zeros((Nx, Ny, Nz))
+    mask_h[1:Nx - 2, 1:Ny - 2, 1:Nz - 2] = 1
+    mask = mask * mask_h
+    del mask_h
+    mask_h = np.swapaxes(mask > 0, 0, 2).flatten().astype(bool)
+    mask_ids = np.arange(0, Nx * Ny * Nz, dtype=np.int64)
+    mask_ids = mask_ids[mask_h]
+    del mask_h
+    tomo_l = np.swapaxes(tomo.astype(np.float32), 0, 2).flatten()
+    dim = np.array([Nx, Ny]).astype('uint32')
+    return np.swapaxes(np.reshape(nonmaxsup_2(tomo_l, tomo_v1x, tomo_v1y, tomo_v1z, mask_ids, dim),
+                                  (Nz, Ny, Nx)), 0, 2)
 
 
 def line_skel(tomo: np.ndarray, mask=None, mode='hessian') -> np.ndarray:
@@ -217,66 +230,50 @@ def point_skel(tomo: np.ndarray, mask=None, mode='hessian') -> np.ndarray:
                            tomo_v3x, tomo_v3y, tomo_v3z)
 
 
-def cs_dice(tomo: np.ndarray, tomo_gt: np.ndarray, skel=None, skel_gt=None) -> tuple:
+def cs_dice(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0) -> tuple:
     """
     Computes surface DICE metric (s-DICE) for two input segmented tomograms
-    :param tomo: input predicted tomogoram (values >0 are considered foregound)
-    :param tomo_gt: input ground truth (values >0 are considered foregound)
-    :param skel: default None, if a np.ndarray with the same shape as tomogram is giving it is filled with the skeleton
-                 generated for computing the metric
-    :param skel_gt: default None, if a np.ndarray with the same shape as ground truth tomogram is giving it is filled
-                    with the skeleton generated for computing the metric
-    :return: returns a 3-tuple where the 1st value is cs-DICE, 2nd TP (Topology Precision), and TS
-             (Topology Sensitivity)
+    :param tomo: input predicted tomogoram (values >0 are considered foreground)
+    :param tomo_gt: input ground truth (values >0 are considered foreground)
+    :param dilation: number of iterations to dilate the segmentation (default 0)
+    :return: returns a 5-tuple where the 1st value is cs-DICE, 2nd TP (Topology Precision), and TS
+             (Topology Sensitivity), tomogram skeleton, ground truth skeleton
     """
     assert tomo.shape == tomo_gt.shape
-    if skel is not None:
-        assert isinstance(skel, np.ndarray)
-        assert skel.shape == tomo.shape
-    if skel_gt is not None:
-        assert isinstance(skel_gt, np.ndarray)
-        assert skel_gt.shape == tomo_gt.shape
-    tomo_seg = tomo > 0
-    tomo_gt_seg = tomo_gt > 0
 
     # Getting segmentations ridges
-    tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_seg).astype(np.float32)
-    tomo_gt_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_gt_seg).astype(np.float32)
+    tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo > 0).astype(np.float32)
     tomo_skel = surface_skel(tomo_dsts, tomo_dsts > 0)
-    if skel is not None:
-        skel = tomo_skel
     del tomo_dsts
+    tomo_gt_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_gt > 0).astype(np.float32)
     tomo_gt_skel = surface_skel(tomo_gt_dsts, tomo_gt_dsts > 0)
-    if skel_gt is not None:
-        skel_gt = tomo_gt_skel
     del tomo_gt_dsts
 
+    # Dilation
+    if dilation > 0:
+        tomo_d = scipy.ndimage.binary_dilation(tomo, iterations=dilation)
+        tomo_gt_d = scipy.ndimage.binary_dilation(tomo_gt, iterations=dilation)
+    else:
+        tomo_d = tomo
+        tomo_gt_d = tomo_gt
+
     # Computing the metric
-    tp = (tomo_skel * tomo_gt_skel).sum() / tomo_skel.sum()
-    ts = (tomo_gt_skel * tomo).sum() / tomo_gt_skel.sum()
+    tp = (tomo_skel * tomo_gt_d).sum() / tomo_skel.sum()
+    ts = (tomo_gt_skel * tomo_d).sum() / tomo_gt_skel.sum()
 
-    return 2*(tp*ts) / (tp + ts), tp, ts
+    return 2*(tp*ts) / (tp + ts), tp, ts, tomo_skel, tomo_gt_skel
 
 
-def cl_dice(tomo: np.ndarray, tomo_gt: np.ndarray, skel=None, skel_gt=None) -> tuple:
+def cl_dice(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0) -> tuple:
     """
     Computes centerline DICE metric (cl-DICE) for two input segmented tomograms
-    :param tomo: input predicted tomogoram (values >0 are considered foregound)
-    :param tomo_gt: input ground truth (values >0 are considered foregound)
-    :param skel: default None, if a np.ndarray with the same shape as tomogram is giving it is filled with the skeleton
-                 generated for computing the metric
-    :param skel_gt: default None, if a np.ndarray with the same shape as ground truth tomogram is giving it is filled
-                    with the skeleton generated for computing the metric
+    :param tomo: input predicted tomogoram (values >0 are considered foreground)
+    :param tomo_gt: input ground truth (values >0 are considered foreground)
+    :param dilation: number of iterations to dilate the segmentation (default 0)
     :return: returns a 3-tuple where the 1st value is cl-DICE, 2nd TP (Topology Precision), and TS
              (Topology Sensitivity)
     """
     assert tomo.shape == tomo_gt.shape
-    if skel is not None:
-        assert isinstance(skel, np.ndarray)
-        assert skel.shape == tomo.shape
-    if skel_gt is not None:
-        assert isinstance(skel_gt, np.ndarray)
-        assert skel_gt.shape == tomo_gt.shape
     tomo_seg = tomo > 0
     tomo_gt_seg = tomo_gt > 0
 
@@ -284,40 +281,35 @@ def cl_dice(tomo: np.ndarray, tomo_gt: np.ndarray, skel=None, skel_gt=None) -> t
     tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_seg)
     tomo_gt_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_gt_seg)
     tomo_skel = line_skel(tomo_dsts, tomo_dsts > 0)
-    if skel is not None:
-        skel = tomo_skel
     del tomo_dsts
     tomo_gt_skel = line_skel(tomo_gt_dsts, tomo_gt_dsts > 0)
-    if skel_gt is not None:
-        skel_gt = tomo_gt_skel
     del tomo_gt_dsts
 
+    # Dilation
+    if dilation > 0:
+        tomo_d = scipy.ndimage.binary_dilation(tomo, iterations=dilation)
+        tomo_gt_d = scipy.ndimage.binary_dilation(tomo_gt, iterations=dilation)
+    else:
+        tomo_d = tomo
+        tomo_gt_d = tomo_gt
+
     # Computing the metric
-    tp = (tomo_skel * tomo_gt_skel).sum() / tomo_skel.sum()
-    ts = (tomo_gt_skel * tomo).sum() / tomo_gt_skel.sum()
+    tp = (tomo_skel * tomo_gt_d).sum() / tomo_skel.sum()
+    ts = (tomo_gt_skel * tomo_d).sum() / tomo_gt_skel.sum()
 
-    return 2*(tp*ts) / (tp + ts), tp, ts
+    return 2*(tp*ts) / (tp + ts), tp, ts, tomo_skel, tomo_gt_skel
 
 
-def pt_dice(tomo: np.ndarray, tomo_gt: np.ndarray, skel=None, skel_gt=None) -> tuple:
+def pt_dice(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0) -> tuple:
     """
     Computes point DICE metric (pt-DICE) for two input segmented tomograms
-    :param tomo: input predicted tomogoram (values >0 are considered foregound)
-    :param tomo_gt: input ground truth (values >0 are considered foregound)
-    :param skel: default None, if a np.ndarray with the same shape as tomogram is giving it is filled with the skeleton
-                 generated for computing the metric
-    :param skel_gt: default None, if a np.ndarray with the same shape as ground truth tomogram is giving it is filled
-                    with the skeleton generated for computing the metric
+    :param tomo: input predicted tomogoram (values >0 are considered foreground)
+    :param tomo_gt: input ground truth (values >0 are considered foreground)
+    :param dilation: number of iterations to dilate the segmentation (default 0)
     :return: returns a 3-tuple where the 1st value is pt-DICE, 2nd TP (Topology Precision), and TS
              (Topology Sensitivity)
     """
     assert tomo.shape == tomo_gt.shape
-    if skel is not None:
-        assert isinstance(skel, np.ndarray)
-        assert skel.shape == tomo.shape
-    if skel_gt is not None:
-        assert isinstance(skel_gt, np.ndarray)
-        assert skel_gt.shape == tomo_gt.shape
     tomo_seg = tomo > 0
     tomo_gt_seg = tomo_gt > 0
 
@@ -325,18 +317,22 @@ def pt_dice(tomo: np.ndarray, tomo_gt: np.ndarray, skel=None, skel_gt=None) -> t
     tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_seg)
     tomo_gt_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_gt_seg)
     tomo_skel = point_skel(tomo_dsts, tomo_dsts > 0)
-    if skel is not None:
-        skel = tomo_skel
     del tomo_dsts
     tomo_gt_skel = point_skel(tomo_gt_dsts, tomo_gt_dsts > 0)
-    if skel_gt is not None:
-        skel_gt = tomo_gt_skel
     del tomo_gt_dsts
 
-    # Computing the metric
-    tp = (tomo_skel * tomo_gt_skel).sum() / tomo_skel.sum()
-    ts = (tomo_gt_skel * tomo).sum() / tomo_gt_skel.sum()
+    # Dilation
+    if dilation > 0:
+        tomo_d = scipy.ndimage.binary_dilation(tomo, iterations=dilation)
+        tomo_gt_d = scipy.ndimage.binary_dilation(tomo_gt, iterations=dilation)
+    else:
+        tomo_d = tomo
+        tomo_gt_d = tomo_gt
 
-    return 2*(tp*ts) / (tp + ts), tp, ts
+    # Computing the metric
+    tp = (tomo_skel * tomo_gt_d).sum() / tomo_skel.sum()
+    ts = (tomo_gt_skel * tomo_d).sum() / tomo_gt_skel.sum()
+
+    return 2*(tp*ts) / (tp + ts), tp, ts, tomo_skel, tomo_gt_skel
 
 

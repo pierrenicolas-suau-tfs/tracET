@@ -133,39 +133,49 @@ static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
 	unsigned int* F ;
 
 
-	if (!PyArg_ParseTuple(args,"OOOOOOOOO",&I_array,&V1x_array,&V1y_array,&V1z_array,&M_array,&dim_array)){
+    // printf("JOL_0\n")
+
+	if (!PyArg_ParseTuple(args,"OOOOOO",&I_array,&V1x_array,&V1y_array,&V1z_array,&M_array,&dim_array)){
 	    printf("ERROR: supression_nonmaxsup_surf: Unable to load inputs.\n");
 	    PyErr_SetString(PyExc_TypeError, "Unable to load inputs.\n");
 		return NULL;}
 
 	//Transform to NumPy matrix
-	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (I_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_surf: Unable to transform I in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    // printf("JOL_1\n")
+
+	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    // printf("JOL_2\n")
+
+	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    // printf("JOL_3\n")
+
+	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1z_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_surf: Unable to transform V1z in a NumPy Matrix.\n");
         return NULL;
     }
+
+    // printf("JOL_4\n")
 
 	PyArrayObject* M_np_array = (PyArrayObject*)PyArray_FROM_OTF(M_array, NPY_INT64, NPY_ARRAY_IN_ARRAY);
 	if (M_np_array == NULL) {
@@ -174,6 +184,8 @@ static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
         return NULL;
     }
 
+    // printf("JOL_5\n")
+
 	PyArrayObject* dim_np_array = (PyArrayObject*)PyArray_FROM_OTF(dim_array, NPY_UINT32, NPY_ARRAY_IN_ARRAY);
 	if (dim_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming dim in a NumPy matrix.\n");
@@ -181,6 +193,7 @@ static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
         return NULL;
     }
 
+    // printf("JOL_6\n")
 
     //Checking dimensions
 
@@ -306,6 +319,7 @@ static PyObject * supression_nonmaxsup_surf(PyObject *self, PyObject *args)
 
 	//Creating numpy matrix from C
 	PyObject* F_array = PyArray_SimpleNewFromData(1, &mn, NPY_UINT32, tomo.F);
+	// PyArrayObject* F_array = (PyArrayObject*)PyArray_FromAny(tomo.F,PyArray_DescrFromType(NPY_UINT32), 0, 0, 0, NULL);
 	if (F_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix F.\n");
         printf("ERROR: supression_nonmaxsup_surf: Fail to create NumPy Matrix F.\n");
@@ -353,49 +367,49 @@ static PyObject * supression_nonmaxsup_line(PyObject *self, PyObject *args)
 		return NULL;}
 
 	//Transform to NumPy matrix
-	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (I_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform I in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V1x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V1y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1z_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V1z in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V2x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V2x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V2y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_line: Unable to transform V2z in a NumPy Matrix.\n");
@@ -564,6 +578,7 @@ static PyObject * supression_nonmaxsup_line(PyObject *self, PyObject *args)
 
 	//Creating numpy matrix from C
 	PyObject* F_array = PyArray_SimpleNewFromData(1, &mn, NPY_UINT32, tomo.F);
+	// PyArrayObject* F_array = (PyArrayObject*)PyArray_FromAny(tomo.F,PyArray_DescrFromType(NPY_UINT32), 0, 0, 0, NULL);
 	if (F_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix F.\n");
         printf("ERROR: supression_nonmaxsup_line: Fail to create NumPy Matrix F.\n");
@@ -606,78 +621,76 @@ static PyObject * supression_nonmaxsup_point(PyObject *self, PyObject *args)
 	unsigned int* F ;
 
 
-
-
 	if (!PyArg_ParseTuple(args,"OOOOOOOOO000",&I_array,&V1x_array,&V1y_array,&V1z_array,&V2x_array,&V2y_array,&V2z_array,&V3x_array,&V3y_array,&V3z_array,&M_array,&dim_array)){
 	    printf("ERROR: supression_nonmaxsup_line: Unable to load inputs.\n");
 	    PyErr_SetString(PyExc_TypeError, "Unable to load inputs.\n");
 		return NULL;}
 
 	//Transform to NumPy matrix
-	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* I_np_array = (PyArrayObject*)PyArray_FROM_OTF(I_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (I_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming I in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform I in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1x_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V1x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1y_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V1y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V1z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V1z_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V1z_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V1z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V1z in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2x_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V2x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V2x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2y_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V2y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V2z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V2z_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V2y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V2z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V2z in a NumPy Matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* V3x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3x_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* V3x_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3x_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V3x_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V3x in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V3x in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V3y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3y_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V3y_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3y_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V3y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V3y in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V3y in a NumPy Matrix.\n");
         return NULL;
     }
 
-	PyArrayObject* V3z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3z_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* V3z_np_array = (PyArrayObject*)PyArray_FROM_OTF(V3z_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (V3y_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming V3z in a NumPy matrix.\n");
         printf("ERROR: supression_nonmaxsup_point: Unable to transform V3z in a NumPy Matrix.\n");
@@ -873,6 +886,7 @@ static PyObject * supression_nonmaxsup_point(PyObject *self, PyObject *args)
 
 	//Creating numpy matrix from C
 	PyObject* F_array = PyArray_SimpleNewFromData(1, &mn, NPY_UINT32, tomo.F);
+	// PyArrayObject* F_array = (PyArrayObject*)PyArray_FromAny(tomo.F, PyArray_DescrFromType(NPY_UINT32), 0, 0, 0, NULL);
 	if (F_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix F.\n");
         printf("ERROR: supression_nonmaxsup_point: Fail to create NumPy Matrix F.\n");
@@ -943,42 +957,42 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
     }
 
     //Transform to NumPy matrix
-	PyArrayObject* Ixx_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixx_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+	PyArrayObject* Ixx_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixx_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (Ixx_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Ixx in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Ixx in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Iyy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyy_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Iyy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyy_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (Ixx_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Iyy in a NumPy matrix.\n");
         printf("ERROR: desyevv Unable transforming Iyy in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Izz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Izz_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Izz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Izz_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (Izz_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Izz in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Izz in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Ixy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixy_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Ixy_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixy_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (Ixy_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Ixy in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Ixy in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Ixz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixz_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Ixz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Ixz_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (Ixz_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Ixz in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Ixz in a NumPy matrix.\n");
         return NULL;
     }
 
-    PyArrayObject* Iyz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyz_array, NPY_FLOAT,NPY_ARRAY_IN_ARRAY);
+    PyArrayObject* Iyz_np_array = (PyArrayObject*)PyArray_FROM_OTF(Iyz_array, NPY_FLOAT32,NPY_ARRAY_IN_ARRAY);
 	if (Iyz_np_array == NULL) {
         PyErr_SetString(PyExc_TypeError, "Error transforming Iyz in a NumPy matrix.\n");
         printf("ERROR: desyevv: Unable transforming Iyz in a NumPy matrix.\n");
@@ -1138,130 +1152,138 @@ static PyObject * supression_desyevv(PyObject *self, PyObject *args)
 
 
 	//Save outputs as a mumpy array
-	PyObject* L1_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.L1);
-
-
+	PyObject* L1_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.L1);
+    // PyArrayObject* L1_array = (PyArrayObject*)PyArray_FromAny(image.L1,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (L1_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L1.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix L1.\n");
         return NULL;
     }
-
-
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)L1_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* L2_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.L2);
+	PyObject* L2_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.L2);
+	// PyArrayObject* L2_array = (PyArrayObject*)PyArray_FromAny(image.L2,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (L2_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L2.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix L2.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)L2_array, NPY_ARRAY_OWNDATA);
 
-	PyObject* L3_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.L3);
+	PyObject* L3_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.L3);
+	// PyArrayObject* L3_array = (PyArrayObject*)PyArray_FromAny(image.L3,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (L3_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix L3.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix L3.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)L3_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V1x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V1x);
+	PyObject* V1x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V1x);
+	// PyArrayObject* V1x_array = (PyArrayObject*)PyArray_FromAny(image.V1x,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V1x_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1x.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V1x.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1x_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V1y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V1y);
+	PyObject* V1y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V1y);
+	// PyArrayObject* V1y_array = (PyArrayObject*)PyArray_FromAny(image.V1y,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V1y_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1y.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V1y.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1y_array, NPY_ARRAY_OWNDATA);
 
-	PyObject* V1z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V1z);
+	PyObject* V1z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V1z);
+	// PyArrayObject* V1z_array = (PyArrayObject*)PyArray_FromAny(image.V1z,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V1z_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V1z.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V1z.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V1z_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V2x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V2x);
+	PyObject* V2x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V2x);
+	// PyArrayObject* V2x_array = (PyArrayObject*)PyArray_FromAny(image.V2x,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V2x_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2x.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V2x.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2x_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V2y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V2y);
+	PyObject* V2y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V2y);
+	// PyArrayObject* V2y_array = (PyArrayObject*)PyArray_FromAny(image.V2y,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V2y_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2y.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V2y.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2y_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V2z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V2z);
+	PyObject* V2z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V2z);
+	// PyArrayObject* V2z_array = (PyArrayObject*)PyArray_FromAny(image.V2z,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V2z_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V2z.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V2z.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V2z_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V3x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V3x);
+	PyObject* V3x_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V3x);
+	// PyArrayObject* V3x_array = (PyArrayObject*)PyArray_FromAny(image.V3x,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V3x_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3x.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V3x.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V3x_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V3y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V3y);
+	PyObject* V3y_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V3y);
+	// PyArrayObject* V3y_array = (PyArrayObject*)PyArray_FromAny(image.V3y,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V3y_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3y.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V3i.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V3y_array, NPY_ARRAY_OWNDATA);
 
 
-	PyObject* V3z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT, image.V3z);
+	PyObject* V3z_array = PyArray_SimpleNewFromData(1, &mh, NPY_FLOAT32, image.V3z);
+	// PyArrayObject* V3z_array = (PyArrayObject*)PyArray_FromAny(image.V3z,PyArray_DescrFromType(NPY_FLOAT32), 0, 0, 0, NULL);
 	if (V3z_array == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Fail to create NumPy Matrix V3z.\n");
         printf("ERROR: desyevv: Fail to create NumPy Matrix V3z.\n");
         return NULL;
     }
-
 	PyArray_ENABLEFLAGS((PyArrayObject*)V3z_array, NPY_ARRAY_OWNDATA);
-
 
 	PyObject *result = PyTuple_Pack(12, L1_array, L2_array, L3_array, V1x_array, V1y_array, V1z_array,
 	    V2x_array, V2y_array, V2z_array, V3x_array, V3y_array, V3z_array);
+
+	/*free(L1);
+	free(L2);
+	free(L3);
+	free(V1x);
+	free(V1y);
+	free(V1z);
+	free(V2x);
+	free(V2y);
+	free(V2z);
+	free(V3x);
+	free(V3y);
+	free(V3z);*/
 
 	return result;
 }
