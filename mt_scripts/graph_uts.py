@@ -174,16 +174,22 @@ def remove_cycles(sparse_graph):
     """
     graph=nx.from_scipy_sparse_array(sparse_graph)
     cycles=list(nx.simple_cycles(graph))
-    max_cycles=maximal_lists(cycles)
+    print('cycles calculated')
+
 
 
     paths=calculate_list_paths(graph)
+    print('paths calculated')
 
 
-    for cycle in max_cycles:
 
-        while (cycle in cycles) == True:
+    k=0
+    while cycles !=[]:
+
+        print('Enter in the bucle')
+        for cycle in cycles:
             edges=found_edges(cycle)
+
             trips=[]
             c_edges=[]
             for edge in edges:
@@ -192,8 +198,19 @@ def remove_cycles(sparse_graph):
             edge_index=np.where(np.array(trips)==min(trips))[0][0]
 
             edge_to_remove = c_edges[int(edge_index)]
-            graph.remove_edge(edge_to_remove[0],edge_to_remove[1])
-            cycle=cycle.remove(edge_to_remove[1])
+
+            try:
+                graph.remove_edge(edge_to_remove[0],edge_to_remove[1])
+            except nx.exception.NetworkXError:
+                continue
+            #cycle=cycle.remove(edge_to_remove[1])
+        cycles = list(nx.simple_cycles(graph))
+        k = k + 1
+        print(k)
+        if k > 10000:
+            print("It has to much cycles")
+
+            break
 
 
 

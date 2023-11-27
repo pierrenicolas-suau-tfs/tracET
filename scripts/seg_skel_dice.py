@@ -19,13 +19,13 @@ Script for computing the skeleton DICE to measure overlapping between two segmen
 import os
 import sys
 import time
-import nrrd
+#import nrrd
 import getopt
 
 import numpy as np
 
 from core import lio
-from metrics.dice import cs_dice, cl_dice, pt_dice
+from metrics.dice import cs_dice, cl_dice_soft, pt_dice
 
 
 def print_help_msg():
@@ -48,10 +48,12 @@ def main(argv):
     in_tomo, in_tomo_gt = None, None
     skel_mode = None
     out_tomo_skel, out_tomo_gt_skel = None, None
-    it_del = None
+    it_dil = None
+    ibin, tbin = None, None
+    ifilt, tfilt= None, None
     try:
-        opts, args = getopt.getopt(argv, "hi:g:m:o:t:d:",["help", "itomo", "igt", "mode", "otomo",
-                                                                           "ogt", "dil"])
+        opts, args = getopt.getopt(argv, "hi:g:m:o:t:d:b:B:f:F",["help", "itomo", "igt", "mode", "otomo",
+                                                                           "ogt", "dil", "ibin", "tbin", "ifilt", "tfilt"])
     except getopt.GetoptError:
         print_help_msg()
         sys.exit()
@@ -88,6 +90,14 @@ def main(argv):
             if it_dil >= 0:
                 print('The number of iterations for dilation must be greater or equal to zero!')
                 sys.exit()
+        elif opt in ("-b", "--ibin"):
+            ibin = bool(eval(arg))
+        elif opt in ("-B", "--tbin"):
+            tbin = bool(eval(arg))
+        elif opt in ("-f", "--ifilt"):
+            ifilt = eval(arg)
+        elif opt in ("-F", "--tfilt"):
+            tfilt = eval(arg)
         else:
             print('The option \'' + opt + '\' is not recognized!')
             print_help_msg()
@@ -117,12 +127,20 @@ def main(argv):
         print('The ground truth tomogram \'-g\' (--igt) must be provided')
         print_help_msg()
         sys.exit()
+    if it_dil is None:
+        it_dil=0
+
+    if ibin is None:
+        ibin=True
+    if tbin is None:
+        tbin=True
+
 
     # Compute the appropriate metric
     if skel_mode == 's':
         results = cs_dice(tomo, tomo_gt, dilation=it_dil)
     elif skel_mode == 'l':
-        results = cl_dice(tomo, tomo_gt, dilation=it_dil)
+        results = cl_dice_soft(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_gt_bin=tbin, inf=ifilt, tf=tfilt)
     elif skel_mode == 'b':
         results = pt_dice(tomo, tomo_gt, dilation=it_dil)
     else:

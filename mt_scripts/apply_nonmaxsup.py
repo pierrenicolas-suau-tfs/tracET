@@ -1,5 +1,5 @@
 
-from supression import nonmaxsup,desyevv
+from supression import nonmaxsup_1,desyevv
 
 import sys, getopt, time
 from graph_uts import *
@@ -98,18 +98,18 @@ def eig3dk(Ixx,Iyy,Izz,Ixy,Ixz,Iyz):
 
     """
     [Nx,Ny,Nz] = np.shape(Ixx)
-    Ixx = np.swapaxes(Ixx,0,2).flatten()
+    Ixx = np.float32(np.swapaxes(Ixx,0,2).flatten())
 
 
-    Iyy = np.swapaxes(Iyy,0,2).flatten()
+    Iyy = np.float32(np.swapaxes(Iyy,0,2).flatten())
 
-    Izz = np.swapaxes(Izz,0,2).flatten()
+    Izz = np.float32(np.swapaxes(Izz,0,2).flatten())
 
-    Ixy = np.swapaxes(Ixy,0,2).flatten()
+    Ixy = np.float32(np.swapaxes(Ixy,0,2).flatten())
 
-    Ixz = np.swapaxes(Ixz,0,2).flatten()
+    Ixz = np.float32(np.swapaxes(Ixz,0,2).flatten())
 
-    Iyz = np.swapaxes(Iyz,0,2).flatten()
+    Iyz = np.float32(np.swapaxes(Iyz,0,2).flatten())
 
     result= desyevv(Ixx,Iyy,Izz,Ixy,Ixz,Iyz)
     L1, L2, L3, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z = result
@@ -162,16 +162,16 @@ def nonmaxsup_fun (I, M, V1x, V1y, V1z, V2x, V2y, V2z):
 
 
     Ir = np.swapaxes(I,0,2).flatten()
-    V1xr = np.swapaxes(V1x,0,2).flatten()
-    V1yr = np.swapaxes(V1y,0,2).flatten()
-    V1zr = np.swapaxes(V1z,0,2).flatten()
-    V2xr = np.swapaxes(V2x,0,2).flatten()
-    V2yr = np.swapaxes(V2y,0,2).flatten()
-    V2zr = np.swapaxes(V2z,0,2).flatten()
+    V1xr = np.float32(np.swapaxes(V1x,0,2).flatten())
+    V1yr = np.float32(np.swapaxes(V1y,0,2).flatten())
+    V1zr = np.float32(np.swapaxes(V1z,0,2).flatten())
+    V2xr = np.float32(np.swapaxes(V2x,0,2).flatten())
+    V2yr = np.float32(np.swapaxes(V2y,0,2).flatten())
+    V2zr = np.float32(np.swapaxes(V2z,0,2).flatten())
 
     dim=np.array([Nx,Ny]).astype('uint32')
 
-    Br=nonmaxsup(Ir,V1xr,V1yr,V1zr,V2xr,V2yr,V2zr,Mr,dim)
+    Br=nonmaxsup_1(Ir,V1xr,V1yr,V1zr,V2xr,V2yr,V2zr,Mr,dim)
     del Ir
     del V1xr
     del V1yr
@@ -227,7 +227,7 @@ def main(argv):
                 print('The input evec must be "Hessian" or "Struct"!')
                 sys.exit()
         elif opt in ("-f","--filt"):
-            f = arg
+            f = int(arg)
         elif opt in ("-o","--otomo"):
             out_tomo = arg
             if not(os.path.splitext(out_tomo)[1] in ('.mrc', '.nhdr', '.nrrd')):
@@ -263,8 +263,8 @@ def main(argv):
     if evec is not None:
         print('Use ',evec, ' eigenvalues')
     else:
-        evec="Struct"
-        print('Default: Use ', evec, ' eigenvalues')
+        evec="Hessian"
+        print('Default: Use ', evec, ' eigenvectors')
     if f is not None:
         print ('Trheshold filter in the masc is ',str(f))
     else:
@@ -291,94 +291,141 @@ def main(argv):
 
     Ty = diff3d(T, 1)
     Tz = diff3d(T, 2)
+    if eval=='Hessian' and evec == 'Hessian':
+        print ('Hessian tensor')
+        Txx = diff3d(Tx, 0)
+        Tyy = diff3d(Ty, 1)
+        Tzz = diff3d(Tz, 2)
+        Txy = diff3d(Tx, 1)
+        Txz = diff3d(Tx, 2)
+        Tyz = diff3d(Ty, 2)
+        print('Calculating eigenvalues')
+        [L1, L2, L3, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z] = eig3dk(Txx, Tyy, Tzz, Txy, Txz, Tyz)
+        del L2
+        del L3
+        del V3x
+        del V3y
+        del V3z
 
-    print ('Hessian tensor')
-    Txx = diff3d(Tx, 0)
-    Tyy = diff3d(Ty, 1)
-    Tzz = diff3d(Tz, 2)
-    Txy = diff3d(Tx, 1)
-    Txz = diff3d(Tx, 2)
-    Tyz = diff3d(Ty, 2)
+        del Txx
+        del Tyy
+        del Tzz
+        del Txy
+        del Txz
+        del Tyz
+        L1=-L1
+    elif eval=='Struct' and evec == 'Struct':
 
 
+        print('Structure tensor')
+        Tsxx = Tx*Tx
+        Tsyy = Ty*Ty
+        Tszz = Tz*Tz
+        Tsxy = Tx*Ty
+        Tsxz = Tx*Tz
+        Tsyz = Ty*Tz
+        print('Calculating eigenvalues')
+        [L1, L2, L3, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z] = eig3dk(Tsxx, Tsyy, Tszz, Tsxy, Tsxz, Tsyz)
+        L1=-L1
+        del L2
+        del L3
+        del V3x
+        del V3y
+        del V3z
 
-    print('Structure tensor')
-    Tsxx = Tx*Tx
-    Tsyy = Ty*Ty
-    Tszz = Tz*Tz
-    Tsxy = Tx*Ty
-    Tsxz = Tx*Tz
-    Tsyz = Ty*Tz
-
-
-
-    print('Calculating eigenvalues')
-    [Lh1, Lh2, Lh3, Vh1x, Vh1y, Vh1z, Vh2x, Vh2y, Vh2z, Vh3x, Vh3y, Vh3z]=eig3dk(Txx,Tyy,Tzz,Txy,Txz,Tyz)
-    [Ls1, Ls2, Ls3, Vs1x, Vs1y, Vs1z, Vs2x, Vs2y, Vs2z, Vs3x, Vs3y, Vs3z] = eig3dk(Tsxx, Tsyy, Tszz, Tsxy, Tsxz, Tsyz)
-    if eval == 'Hessian':
-        L1 = -Lh1
+        del Tsxx
+        del Tsyy
+        del Tszz
+        del Tsxy
+        del Tsxz
+        del Tsyz
     else:
-        L1 = -Ls1
-    if evec == 'Hessian':
-        V1x = Vh1x
-        V1y = Vh1y
-        V1z = Vh1z
-        V2x = Vh2x
-        V2y = Vh2y
-        V2z = Vh2z
-    else:
-        V1x = Vs1x
-        V1y = Vs1y
-        V1z = Vs1z
-        V2x = Vs2x
-        V2y = Vs2y
-        V2z = Vs2z
+        print('Hessian tensor')
+        Txx = diff3d(Tx, 0)
+        Tyy = diff3d(Ty, 1)
+        Tzz = diff3d(Tz, 2)
+        Txy = diff3d(Tx, 1)
+        Txz = diff3d(Tx, 2)
+        Tyz = diff3d(Ty, 2)
 
-    del Lh1
-    del Lh2
-    del Lh3
-    del Ls1
-    del Ls2
-    del Ls3
-    del Vh1x
-    del Vh1y
-    del Vh1z
-    del Vh2x
-    del Vh2y
-    del Vh2z
-    del Vh3x
-    del Vh3y
-    del Vh3z
-    del Vs1x
-    del Vs1y
-    del Vs1z
-    del Vs2x
-    del Vs2y
-    del Vs2z
-    del Vs3x
-    del Vs3y
-    del Vs3z
+        print('Structure tensor')
+        Tsxx = Tx * Tx
+        Tsyy = Ty * Ty
+        Tszz = Tz * Tz
+        Tsxy = Tx * Ty
+        Tsxz = Tx * Tz
+        Tsyz = Ty * Tz
+        print('Calculating eigenvalues')
 
 
-    lio.write_mrc(L1.astype(np.float32),
-                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_L1_python.mrc')
-    lio.write_mrc(V1x.astype(np.float32),
-                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V1x_python.mrc')
-    lio.write_mrc(V1y.astype(np.float32),
-                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V1y_python.mrc')
-    lio.write_mrc(V1z.astype(np.float32),
-                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V1z_python.mrc')
-    lio.write_mrc(V2x.astype(np.float32),
-                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V2x_python.mrc')
-    lio.write_mrc(V2y.astype(np.float32),
-                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V2y_python.mrc')
-    lio.write_mrc(V2z.astype(np.float32),
-                  '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_V2z_python.mrc')
+        [Lh1, Lh2, Lh3, Vh1x, Vh1y, Vh1z, Vh2x, Vh2y, Vh2z, Vh3x, Vh3y, Vh3z]=eig3dk(Txx,Tyy,Tzz,Txy,Txz,Tyz)
+        [Ls1, Ls2, Ls3, Vs1x, Vs1y, Vs1z, Vs2x, Vs2y, Vs2z, Vs3x, Vs3y, Vs3z] = eig3dk(Tsxx, Tsyy, Tszz, Tsxy, Tsxz, Tsyz)
+        if eval == 'Hessian':
+            L1 = -Lh1
+        else:
+            L1 = -Ls1
+        if evec == 'Hessian':
+            V1x = Vh1x
+            V1y = Vh1y
+            V1z = Vh1z
+            V2x = Vh2x
+            V2y = Vh2y
+            V2z = Vh2z
+        else:
+            V1x = Vs1x
+            V1y = Vs1y
+            V1z = Vs1z
+            V2x = Vs2x
+            V2y = Vs2y
+            V2z = Vs2z
+
+        del Lh1
+        del Lh2
+        del Lh3
+        del Ls1
+        del Ls2
+        del Ls3
+        del Vh1x
+        del Vh1y
+        del Vh1z
+        del Vh2x
+        del Vh2y
+        del Vh2z
+        del Vh3x
+        del Vh3y
+        del Vh3z
+        del Vs1x
+        del Vs1y
+        del Vs1z
+        del Vs2x
+        del Vs2y
+        del Vs2z
+        del Vs3x
+        del Vs3y
+        del Vs3z
+        del Txx
+        del Tyy
+        del Tzz
+        del Txy
+        del Txz
+        del Tyz
+        del Tsxx
+        del Tsyy
+        del Tszz
+        del Tsxy
+        del Tsxz
+        del Tsyz
+
+
+    del Tx
+    del Ty
+    del Tz
+
 
 
     M=np.zeros_like(L1)
     M[L1>f] = 1
-    lio.write_mrc(M.astype(np.float32), '/project/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_M_python.mrc')
+
 
 
     print('Applying the nonmaximal suppresion' )

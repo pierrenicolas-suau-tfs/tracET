@@ -6,10 +6,18 @@ __author__ = 'Antonio Martinez-Sanchez'
 
 import scipy
 import numpy as np
-
-from core.diff import diff3d, nonmaxsup_surf, nonmaxsup_line, nonmaxsup_point
+from core import lio
+from core.diff import diff3d, nonmaxsup_surf, nonmaxsup_line, nonmaxsup_point, angauss
 from supression import desyevv, nonmaxsup_2
+from mt.representation import points_to_btomo, seg_dist_trans
 
+def thick_dst(map,zf=1,mt_dst=15):
+    tomo_dst = seg_dist_trans(map)
+    tomo_mt = tomo_dst <= mt_dst * zf
+    tomo_mt_dst = tomo_dst - mt_dst
+    tomo_mt_dst[tomo_mt_dst > 0] = 0
+    tomo_mt_dst *= -1
+    return tomo_mt_dst
 
 def surface_skel(tomo: np.ndarray, mask=None) -> np.ndarray:
     """
@@ -29,18 +37,18 @@ def surface_skel(tomo: np.ndarray, mask=None) -> np.ndarray:
     tomo_z = diff3d(tomo, 2).astype(np.float32)
 
     # Hessian tensor
-    tomo_xx = diff3d(tomo_x, 0).flatten()
-    tomo_yy = diff3d(tomo_y, 1).flatten()
-    tomo_zz = diff3d(tomo_z, 2).flatten()
-    tomo_xy = diff3d(tomo_x, 1).flatten()
-    tomo_xz = diff3d(tomo_x, 2).flatten()
-    tomo_yz = diff3d(tomo_y, 2).flatten()
+    tomo_xx = np.swapaxes(diff3d(tomo_x, 0),0,2).flatten()
+    tomo_yy = np.swapaxes(diff3d(tomo_y, 1),0,2).flatten()
+    tomo_zz = np.swapaxes(diff3d(tomo_z, 2),0,2).flatten()
+    tomo_xy = np.swapaxes(diff3d(tomo_x, 1),0,2).flatten()
+    tomo_xz = np.swapaxes(diff3d(tomo_x, 2),0,2).flatten()
+    tomo_yz = np.swapaxes(diff3d(tomo_y, 2),0,2).flatten()
     del tomo_x
     del tomo_y
     del tomo_z
 
     # C-processing eigen-problem
-    _, _, _, tomo_v1x, tomo_v1y, tomo_v1z, _, _, _, _, _, _ = desyevv(tomo_xx, tomo_yy, tomo_zz,
+    tomo_l, _, _, tomo_v1x, tomo_v1y, tomo_v1z, _, _, _, _, _, _ = desyevv(tomo_xx, tomo_yy, tomo_zz,
                                                                             tomo_xy, tomo_xz, tomo_yz)
     del tomo_xx
     del tomo_yy
@@ -59,10 +67,15 @@ def surface_skel(tomo: np.ndarray, mask=None) -> np.ndarray:
     mask_ids = np.arange(0, Nx * Ny * Nz, dtype=np.int64)
     mask_ids = mask_ids[mask_h]
     del mask_h
-    tomo_l = np.swapaxes(tomo.astype(np.float32), 0, 2).flatten()
+    #tomo_l = np.swapaxes(tomo_l.astype(np.float32), 0, 2).flatten()
     dim = np.array([Nx, Ny]).astype('uint32')
-    return np.swapaxes(np.reshape(nonmaxsup_2(tomo_l, tomo_v1x, tomo_v1y, tomo_v1z, mask_ids, dim),
-                                  (Nz, Ny, Nx)), 0, 2)
+    supred = np.swapaxes(np.reshape(nonmaxsup_2(tomo_l, tomo_v1x, tomo_v1y, tomo_v1z, mask_ids, dim),(Nz, Ny, Nx)), 0, 2)
+    tomo_l = np.swapaxes(np.reshape(tomo_l, (Nz, Ny, Nx)), 0, 2)
+    tomo_v1x = np.swapaxes(np.reshape(tomo_v1x, (Nz, Ny, Nx)), 0, 2)
+    tomo_v1y = np.swapaxes(np.reshape(tomo_v1y, (Nz, Ny, Nx)), 0, 2)
+    tomo_v1z = np.swapaxes(np.reshape(tomo_v1z, (Nz, Ny, Nx)), 0, 2)
+
+    return supred, tomo_l, tomo_v1x, tomo_v1y, tomo_v1z
 
 
 def line_skel(tomo: np.ndarray, mask=None, mode='hessian') -> np.ndarray:
@@ -87,12 +100,12 @@ def line_skel(tomo: np.ndarray, mask=None, mode='hessian') -> np.ndarray:
     tomo_z = diff3d(tomo, 2).astype(np.float32)
 
     # Hessian tensor
-    tomo_xx = diff3d(tomo_x, 0).flatten()
-    tomo_yy = diff3d(tomo_y, 1).flatten()
-    tomo_zz = diff3d(tomo_z, 2).flatten()
-    tomo_xy = diff3d(tomo_x, 1).flatten()
-    tomo_xz = diff3d(tomo_x, 2).flatten()
-    tomo_yz = diff3d(tomo_y, 2).flatten()
+    tomo_xx = np.swapaxes(diff3d(tomo_x, 0), 0, 2).flatten()
+    tomo_yy = np.swapaxes(diff3d(tomo_y, 1), 0, 2).flatten()
+    tomo_zz = np.swapaxes(diff3d(tomo_z, 2), 0, 2).flatten()
+    tomo_xy = np.swapaxes(diff3d(tomo_x, 1), 0, 2).flatten()
+    tomo_xz = np.swapaxes(diff3d(tomo_x, 2), 0, 2).flatten()
+    tomo_yz = np.swapaxes(diff3d(tomo_y, 2), 0, 2).flatten()
     if mode != 'structure':
         del tomo_x
         del tomo_y
@@ -102,8 +115,9 @@ def line_skel(tomo: np.ndarray, mask=None, mode='hessian') -> np.ndarray:
     tomo_l1, _, _, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z, _, _, _ = desyevv(tomo_xx, tomo_yy,
                                                                                                  tomo_zz, tomo_xy,
                                                                                                  tomo_xz, tomo_yz)
+
     if mode != 'structure':
-        tomo_l1 = np.swapaxes(np.reshape(tomo_l1, (Nz, Ny, Nx)), 0, 2)
+        tomo_l1 = np.swapaxes(np.reshape(np.abs(tomo_l1), (Nz, Ny, Nx)), 0, 2)
         tomo_v1x = np.swapaxes(np.reshape(tomo_v1x, (Nz, Ny, Nx)), 0, 2)
         tomo_v1y = np.swapaxes(np.reshape(tomo_v1y, (Nz, Ny, Nx)), 0, 2)
         tomo_v1z = np.swapaxes(np.reshape(tomo_v1z, (Nz, Ny, Nx)), 0, 2)
@@ -139,7 +153,7 @@ def line_skel(tomo: np.ndarray, mask=None, mode='hessian') -> np.ndarray:
         tomo_v2z = np.swapaxes(np.reshape(tomo_v2z, (Nz, Ny, Nx)), 0, 2)
 
     # Non-maximum suppression
-    return nonmaxsup_line(tomo_l1, mask, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z)
+    return nonmaxsup_line(tomo_l1, mask, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z), tomo_l1, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z
 
 
 def point_skel(tomo: np.ndarray, mask=None, mode='hessian') -> np.ndarray:
@@ -243,10 +257,26 @@ def cs_dice(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0) -> tuple:
 
     # Getting segmentations ridges
     tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo > 0).astype(np.float32)
-    tomo_skel = surface_skel(tomo_dsts, tomo_dsts > 0)
+    tomo_skel, tomo_l1, tomo_v1x, tomo_v1y, tomo_v1z = surface_skel(tomo_dsts, tomo_dsts > 0)
+    #lio.write_mrc(tomo_l1.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv_sur/Ctrl_20220511_368d_tomo06_seg_L1.mrc')
+    #lio.write_mrc(tomo_v1x.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv_sur/Ctrl_20220511_368d_tomo06_seg_V1x.mrc')
+    #lio.write_mrc(tomo_v1y.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv_sur/Ctrl_20220511_368d_tomo06_seg_V1y.mrc')
+    #lio.write_mrc(tomo_v1z.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv_sur/Ctrl_20220511_368d_tomo06_seg_V1z.mrc')
     del tomo_dsts
     tomo_gt_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_gt > 0).astype(np.float32)
-    tomo_gt_skel = surface_skel(tomo_gt_dsts, tomo_gt_dsts > 0)
+    tomo_gt_skel, tomo_l1, tomo_v1x, tomo_v1y, tomo_v1z = surface_skel(tomo_gt_dsts, tomo_gt_dsts > 0)
+    #lio.write_mrc(tomo_l1.astype(np.float32),
+    #              '/project/chiem/pelayo/neural_network/try_dice/desyevv_sur/Ctrl_20220511_368d_tomo06_gt_L1.mrc')
+    #lio.write_mrc(tomo_v1x.astype(np.float32),
+     #             '/project/chiem/pelayo/neural_network/try_dice/desyevv_sur/Ctrl_20220511_368d_tomo06_gt_V1x.mrc')
+    #lio.write_mrc(tomo_v1y.astype(np.float32),
+     #             '/project/chiem/pelayo/neural_network/try_dice/desyevv_sur/Ctrl_20220511_368d_tomo06_gt_V1y.mrc')
+    #lio.write_mrc(tomo_v1z.astype(np.float32),
+     #             '/project/chiem/pelayo/neural_network/try_dice/desyevv_sur/Ctrl_20220511_368d_tomo06_gt_V1z.mrc')
     del tomo_gt_dsts
 
     # Dilation
@@ -277,12 +307,46 @@ def cl_dice(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0) -> tuple:
     tomo_seg = tomo > 0
     tomo_gt_seg = tomo_gt > 0
 
+
     # Getting segmentations ridges
     tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_seg)
     tomo_gt_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_gt_seg)
-    tomo_skel = line_skel(tomo_dsts, tomo_dsts > 0)
+    #tomo_dsts=thick_dst(tomo_seg)
+    #tomo_gt_dsts=thick_dst(tomo_gt_seg)
+    #lio.write_mrc(tomo_dsts.astype(np.float32),'/project/chiem/pelayo/neural_network/try_dice/distance_transf/Ctrl_20220511_368d_tomo06_seg_dst.mrc')
+    #lio.write_mrc(tomo_gt_dsts.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/distance_transf/Ctrl_20220511_368d_tomo06_gt_dst.mrc')
+    tomo_skel, tomo_l1, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z = line_skel(tomo_dsts, tomo_dsts > 0)
+    #lio.write_mrc(tomo_l1.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_L1.mrc')
+    #lio.write_mrc(tomo_v1x.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V1x.mrc')
+    #lio.write_mrc(tomo_v1y.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V1y.mrc')
+    #lio.write_mrc(tomo_v1z.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V1z.mrc')
+    #lio.write_mrc(tomo_v2x.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V2x.mrc')
+    #lio.write_mrc(tomo_v2y.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V2y.mrc')
+    #lio.write_mrc(tomo_v2z.astype(np.float32),
+                  #'/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V2z.mrc')
     del tomo_dsts
-    tomo_gt_skel = line_skel(tomo_gt_dsts, tomo_gt_dsts > 0)
+    tomo_gt_skel, tomo_l1, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z = line_skel(tomo_gt_dsts, tomo_gt_dsts > 0)
+    lio.write_mrc(tomo_l1.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_L1.mrc')
+    lio.write_mrc(tomo_v1x.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V1x.mrc')
+    lio.write_mrc(tomo_v1y.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V1y.mrc')
+    lio.write_mrc(tomo_v1z.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V1z.mrc')
+    lio.write_mrc(tomo_v2x.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V2x.mrc')
+    lio.write_mrc(tomo_v2y.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V2y.mrc')
+    lio.write_mrc(tomo_v2z.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V2z.mrc')
     del tomo_gt_dsts
 
     # Dilation
@@ -299,6 +363,105 @@ def cl_dice(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0) -> tuple:
 
     return 2*(tp*ts) / (tp + ts), tp, ts, tomo_skel, tomo_gt_skel
 
+def cl_dice_soft(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0, tomo_bin=True, tomo_gt_bin=True, inf=None, tf =None) -> tuple:
+    """
+        Computes centerline DICE metric (cl-DICE) for two input segmented tomograms
+        :param tomo: input predicted tomogoram (values >0 are considered foreground)
+        :param tomo_gt: input ground truth (values >0 are considered foreground)
+        :param dilation: number of iterations to dilate the segmentation (default 0)
+        :return: returns a 3-tuple where the 1st value is cl-DICE, 2nd TP (Topology Precision), and TS
+                 (Topology Sensitivity)
+        """
+    assert tomo.shape == tomo_gt.shape
+    if tomo_bin:
+        tomo_seg = tomo > 0
+        tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_seg)
+        tomo_dsts = angauss(tomo_dsts,3)
+    else:
+        if inf == None:
+            mask = np.ones_like(tomo)
+        else:
+            mask = np.zeros_like(tomo)
+            mask[tomo > inf] = 1
+        tomo_dsts = tomo * mask
+
+    if tomo_gt_bin:
+        tomo_gt_seg = tomo_gt > 0
+        tomo_gt_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_gt_seg)
+        tomo_gt_dsts = angauss(tomo_gt_dsts,6)
+    else:
+        if tf == None:
+            mask_gt = np.ones_like(tomo_gt)
+        else:
+            mask_gt = np.zeros_like(tomo_gt)
+            mask_gt[tomo_gt > tf] = 1
+        tomo_gt_dsts = tomo_gt * mask_gt
+
+
+    # Getting segmentations ridges
+
+
+    # tomo_dsts=thick_dst(tomo_seg)
+    # tomo_gt_dsts=thick_dst(tomo_gt_seg)
+    lio.write_mrc(tomo_dsts.astype(np.float32),'/project/chiem/pelayo/neural_network/try_dice/distance_transf/Ctrl_20220511_368d_tomo06_seg_dst.mrc')
+    lio.write_mrc(tomo_gt_dsts.astype(np.float32),
+    '/project/chiem/pelayo/neural_network/try_dice/distance_transf/Ctrl_20220511_368d_tomo06_gt_dst.mrc')
+    tomo_skel, tomo_l1, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z = line_skel(tomo_dsts, tomo_dsts > 0)
+    # lio.write_mrc(tomo_l1.astype(np.float32),
+    # '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_L1.mrc')
+    # lio.write_mrc(tomo_v1x.astype(np.float32),
+    # '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V1x.mrc')
+    # lio.write_mrc(tomo_v1y.astype(np.float32),
+    # '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V1y.mrc')
+    # lio.write_mrc(tomo_v1z.astype(np.float32),
+    # '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V1z.mrc')
+    # lio.write_mrc(tomo_v2x.astype(np.float32),
+    # '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V2x.mrc')
+    # lio.write_mrc(tomo_v2y.astype(np.float32),
+    # '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V2y.mrc')
+    # lio.write_mrc(tomo_v2z.astype(np.float32),
+    # '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_seg_V2z.mrc')
+    del tomo_dsts
+    tomo_gt_skel, tomo_l1, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z = line_skel(tomo_gt_dsts,
+                                                                                                  tomo_gt_dsts > 0)
+    lio.write_mrc(tomo_l1.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_L1.mrc')
+    lio.write_mrc(tomo_v1x.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V1x.mrc')
+    lio.write_mrc(tomo_v1y.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V1y.mrc')
+    lio.write_mrc(tomo_v1z.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V1z.mrc')
+    lio.write_mrc(tomo_v2x.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V2x.mrc')
+    lio.write_mrc(tomo_v2y.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V2y.mrc')
+    lio.write_mrc(tomo_v2z.astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/desyevv/Ctrl_20220511_368d_tomo06_gt_V2z.mrc')
+    del tomo_gt_dsts
+
+    # Dilation
+    if tomo_bin:
+        tomo_d = tomo
+    else:
+        tomo_d = mask
+    if tomo_gt_bin:
+        tomo_gt_d= tomo_gt
+    else:
+        tomo_gt_d=mask_gt
+
+    if dilation > 0:
+        tomo_d = scipy.ndimage.binary_dilation(tomo_d, iterations=dilation)
+        tomo_gt_d = scipy.ndimage.binary_dilation(tomo_gt_d, iterations=dilation)
+
+
+    # Computing the metric
+    tp = (tomo_skel * tomo_gt_d).sum() / tomo_skel.sum()
+    lio.write_mrc((tomo_skel * tomo_gt_d).astype(np.float32),
+                  '/project/chiem/pelayo/neural_network/try_dice/prov_map_skel/Ctrl_20220511_368d_tomo06_det_skelxgt.mrc')
+    ts = (tomo_gt_skel * tomo_d).sum() / tomo_gt_skel.sum()
+
+    return 2 * (tp * ts) / (tp + ts), tp, ts, tomo_skel, tomo_gt_skel
 
 def pt_dice(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0) -> tuple:
     """
@@ -331,6 +494,7 @@ def pt_dice(tomo: np.ndarray, tomo_gt: np.ndarray, dilation=0) -> tuple:
 
     # Computing the metric
     tp = (tomo_skel * tomo_gt_d).sum() / tomo_skel.sum()
+
     ts = (tomo_gt_skel * tomo_d).sum() / tomo_gt_skel.sum()
 
     return 2*(tp*ts) / (tp + ts), tp, ts, tomo_skel, tomo_gt_skel
