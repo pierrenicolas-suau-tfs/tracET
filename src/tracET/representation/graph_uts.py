@@ -146,9 +146,7 @@ def found_edges(cycle):
     :param cycle: nx simple cycle
     :return:edges: list of edges
     """
-    edges=[]
-    for i in range(len(cycle)-1):
-        edges.append(cycle[i:i+2])
+    edges=list(filter(lambda x: len(x) == 2, cycle))
     return(edges)
 
 def count_paths_per_edges(paths,edge):
@@ -216,3 +214,44 @@ def remove_cycles(sparse_graph):
 
     L_sparse=nx.to_scipy_sparse_array(graph)
     return(L_sparse)
+
+def spannig_tree_apply(sparse_graph):
+    graph = nx.from_scipy_sparse_array(sparse_graph)
+    graph_no_cycles=nx.minimum_spanning_tree(graph)
+    return(nx.to_scipy_sparse_array(graph_no_cycles))
+
+def terminal_nodes(graph):
+    return(list(filter(lambda node: graph.degree(node) == 1, graph.nodes())))
+
+def mapping_change(graph):
+    mapping={node: i+1 for i, node in enumerate(sorted(graph.nodes()))}
+    return(mapping)
+def remove_branches(sparse_graph,node_coordinates):
+    graph = nx.from_scipy_sparse_array(sparse_graph)
+    clean_graph=graph
+
+    endpoints = terminal_nodes(clean_graph)
+    path_coords = node_coordinates
+
+
+    if len(endpoints)>2:
+    #    if i>0:
+    #        mapping = mapping_change(clean_graph)
+    #        list_points = [mapping[endpoint] for endpoint in endpoints]
+    #        clean_graph.remove_nodes_from(endpoints[1:len(endpoints) - 1])
+
+    #        path_coords = np.delete(path_coords, list_points[1:len(list_points) - 1], axis=0)
+     #   else:
+        clean_graph.remove_nodes_from(endpoints[1:len(endpoints) - 1])
+        path_coords=np.delete(path_coords,endpoints[1:len(endpoints)-1],axis=0)
+
+        #endpoints=terminal_nodes(clean_graph)
+        #i=i+1
+    #long_path=nx.shortest_path(graph,endpoints[0],endpoints[len(endpoints)-1])
+    #clean_graph=graph.subgraph(long_path)
+
+
+    sparse_clean_graph=(nx.to_scipy_sparse_array(clean_graph))
+    #path_nodes = list(sparse_clean_graph)
+    #path_coords = node_coordinates[long_path]
+    return(sparse_clean_graph,path_coords)

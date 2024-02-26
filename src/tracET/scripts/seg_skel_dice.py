@@ -24,8 +24,8 @@ import getopt
 
 import numpy as np
 
-from core import lio
-from metrics.dice import cs_dice, cl_dice_soft, pt_dice
+from src.tracET.core import lio
+from src.tracET.metrics import cs_dice, cl_dice_soft, pt_dice
 
 
 def print_help_msg():
@@ -140,7 +140,7 @@ def main(argv):
     if skel_mode == 's':
         results = cs_dice(tomo, tomo_gt, dilation=it_dil)
     elif skel_mode == 'l':
-        results = cl_dice_soft(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_gt_bin=tbin, inf=ifilt, tf=tfilt)
+        results = cl_dice_soft(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_gt_bin=tbin, imf=ifilt, tf=tfilt)
     elif skel_mode == 'b':
         results = pt_dice(tomo, tomo_gt, dilation=it_dil)
     else:

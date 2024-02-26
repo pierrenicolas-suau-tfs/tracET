@@ -1,8 +1,7 @@
 
 import sys, getopt, time
 from vtk_uts import *
-from graph_uts import *
-from core import lio
+from src.tracET.core import lio
 import pandas as pd
 
 def main(argv):
@@ -10,8 +9,9 @@ def main(argv):
     main_dir = None
     in_tomo, out_dir = None, None
     r, s = None, None
+    t,b=None,None
     try:
-        opts, args = getopt.getopt(argv, "hm:i:r:s:o:",["help","main","itomo","rad","subsam","odir"])
+        opts, args = getopt.getopt(argv, "hm:i:r:s:t:b:o:",["help","main","itomo","rad","subsam","type","branch","odir"])
     except getopt.GetoptError:
         print('python trace_graph.py -i <in_tomo> -r <radius> -s <subsampling> -o <out_dir>')
         sys.exit()
@@ -22,6 +22,8 @@ def main(argv):
             print('\t-i (--itomo) <in_tomo> input tomogram (point cloud)')
             print('\t-r (--rad) <radius> radius to connect points in the graph')
             print('\t-s (--subsam) <subsampling> radius of subsampling (optional, default no subsampling)')
+            print('\t-t (--type) <type of filament> "l" (linear) or "n" (net) (optional, default linear)')
+            print('\t-b (--branch) <branch grade> times we repeat the branch removal for branches with more than one edge. (optional, default 1. Only for linear)')
             print('\t-o (--odir) <out_dir> putput directory')
         elif opt in ("-m","--main"):
             main_dir = arg
@@ -34,6 +36,10 @@ def main(argv):
             r=arg
         elif opt in ("-s","--subsam"):
             s=arg
+        elif opt in ("-t","--type"):
+            t=arg
+        elif opt in ("-b","--branch"):
+            b=arg
         elif opt in ("-o","--odir"):
             out_dir=arg
 
@@ -45,7 +51,7 @@ def main(argv):
     if in_tomo is not None:
         print('\t-Loading input tomogram:', in_tomo)
         if os.path.splitext(in_tomo)[1] == '.mrc':
-            T = lio.load_mrc(main_dir+in_tomo)
+            T = lio.load_mrc(main_dir + in_tomo)
         else:
             T = nrrd.read(main_dir+in_tomo)[0]
     else:
@@ -63,6 +69,16 @@ def main(argv):
     else:
         s=0
         print('Default no subsampling')
+    if t is not None:
+        print('Type of filament = ',str(t))
+    else:
+        t='l'
+        print('Default: linear filament')
+    if b is not None:
+        print('Branch grade = ',str(b))
+    else:
+        b=1
+        print('Default: branches grade one')
     if out_dir is not None:
         print ('Save out vtp in: ',out_dir)
     else:
@@ -81,11 +97,20 @@ def main(argv):
     for i in range(len(graph_ar_comps)):
         print('Procesing tubule ',str(i))
         print('Removing cycles')
-        L_graph=remove_cycles(graph_ar_comps[i])
-        L_graph=remove_cycles(L_graph)
+        L_graph=spannig_tree_apply(graph_ar_comps[i])
+       # L_graph=remove_cycles(L_graph)
+        if t=='l':
+            print('For a linear filament, we remove the shortest branches')
+            L_coords = coords_comps[i]
+            for number in range(int(b)):
+                L_graph,L_coords=remove_branches(L_graph,L_coords)
+                print(number)
+        else:
+            print('For a net, we leave the branches')
+            L_coords=coords_comps[i]
         print('Make polydata')
         Targets, Sources = (L_graph.nonzero())
-        points_poly = make_graph_polydata(coords_comps[i],Sources,Targets)
+        points_poly = make_graph_polydata(L_coords,Sources,Targets)
         print('Saving')
         save_vtp(points_poly, main_dir+ out_dir + os.path.splitext(in_tomo)[0]+ '_skel_graph_tubule_'+str(i)+'.vtp')
         print(os.path.splitext(in_tomo)[0]+ '_skel_graph_tubule_'+str(i)+'.vtp'+' saved in '+main_dir+out_dir)

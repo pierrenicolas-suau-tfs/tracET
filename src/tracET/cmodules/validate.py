@@ -1,4 +1,4 @@
-from core import lio
+from src.tracET.core import lio
 import numpy as np
 
 T_py= lio.load_mrc('/data/chiem/pelayo/neural_network/compara/python/Ctrl_20220511_368d_tomo06_reg_synth_supred_python.mrc')

@@ -1409,14 +1409,13 @@ static void* desyevv3stub( void* ptr ){
 		}
 	}while(lock);
 
+
 }
 
 // ----------------------------------------------------------------------------
 static int dsyevv3(float A[3][3], float Q[3][3], float w[3])
 // ----------------------------------------------------------------------------
-// Calculates the eigenvalues and normalized eigenvectors of a symmetric 3x3
-// matrix A using Cardano's method for the eigenvalues and an analytical
-// method based on vector cross products for the eigenvectors.
+//
 // Only the diagonal and upper triangular parts of A need to contain meaningful
 // values. However, all of A may be used as temporary storage and may hence be
 // destroyed.

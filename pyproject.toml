@@ -1,0 +1,18 @@
+[build-sistem]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tracET"
+version = "1.0.0"
+authors = [
+    {name = "Pelayo Alvarez-Brecht"},
+    {name = "Antonio Martinez-Sanchez"}
+]
+description = "A package that could transform a scalar map in a point cloud, trace a graph for filaments and compute "
+                "the dice metric for two segmentations. "
+readme = "README.md"
+classifiers = []
+[project.urls]
+Homepage =
+Issues =
