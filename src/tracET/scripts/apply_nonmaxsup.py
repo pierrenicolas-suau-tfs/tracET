@@ -1,13 +1,14 @@
 import os
 import sys
 import time
-import nrrd
+#import nrrd
 import getopt
 
 import numpy as np
 
-
-from src.tracET.metrics.dice2 import prepare_input, surface_skel, line_skel,point_skel
+from src.tracET.core import lio
+from src.tracET.core.skel import surface_skel, line_skel,point_skel
+from src.tracET.core.diff import prepare_input,remove_borders
 
 def main(argv):
     # Input parsing
@@ -19,7 +20,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hi:s:e:m:b:f:o:",["help","itomo","sdesv","eval","smode","ibin","filt","otomo"])
     except getopt.GetoptError:
-        print('python script_nonmaxsup.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
+        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
         sys.exit()
     for opt, arg in opts:
         if opt in ("-h","--help"):
@@ -45,7 +46,7 @@ def main(argv):
         elif opt in ("-e","eval"):
             eval=arg
             if not (eval in ('Hessian','Struct')):
-                print('The input eval must be "Hessian" or "Struct"!')
+                print('The input eval must be "hessian" or "struct"!')
                 sys.exit()
         elif opt in ("-m", "smode"):
             skel_mode = arg
@@ -55,14 +56,14 @@ def main(argv):
         elif opt in ("-b","--ibin"):
             ibin=bool(arg)
         elif opt in ("-f","--filt"):
-            f = int(arg)
+            f = float(arg)
         elif opt in ("-o","--otomo"):
             out_tomo = arg
             if not(os.path.splitext(out_tomo)[1] in ('.mrc', '.nhdr', '.nrrd')):
                 print('The output file must have a .mrc, .nhdr or nrrd extension!')
                 sys.exit()
         else:
-            print('python apply_nonmaxsup.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -v <eigenvectors> -f <filter> -o <out_tomo>')
+            print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -v <eigenvectors> -f <filter> -o <out_tomo>')
             print("Inputs must be one of them!")
             sys.exit()
 
@@ -73,46 +74,47 @@ def main(argv):
         else:
             T = nrrd.read(in_tomo)[0]
     else:
-        print('python script_nonmaxsup.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
+        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
         print('Almost an input tomogram -i must be provided!')
         sys.exit()
     if s is not None:
         s=float(s)
         print('Smooth desviation: ',str(s))
     else:
-        prin('python script_nonmaxsup.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
+        prin('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
         print('Almost an input sdesv parameter -s must be provided!')
         sys.exit()
     if eval is not None:
         print('Use ',eval, ' eigenvalues')
     else:
-        eval="Hessian"
+        eval="hessian"
         print('Default: Use ', eval, ' eigenvalues')
     if skel_mode is not None:
         print('Structure to analysis',skel_mode)
     else:
-        print('python script_nonmaxsup.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
+        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
         print('Almost an input sdesv parameter -s must be provided!')
         sys.exit()
     if f is not None:
         print ('Trheshold filter in the masc is ',str(f))
     else:
-        f=0.5
+        f=5
         print('Default: Trheshold filter in the masc is ', str(f))
     if out_tomo is not None:
         print ('Output tomogram: ',out_tomo)
     else:
-        print('python apply_nonmaxsup.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -v <eigenvectors> -f <filter> -o <out_tomo>')
+        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -v <eigenvectors> -f <filter> -o <out_tomo>')
         print('Almost an output tomogram -o must be provided!')
         sys.exit()
 
-    T=prepare_input(T,sigma=s,bin=ibin,imf=f)
+    T=prepare_input(T,sigma=s,bin=ibin,imf=None)
     if skel_mode == 's':
-        P = surface_skel(T,T>0,mode=eval)
-    elif skel_mode= 'l':
-        P = line_skel(T,T>0,mode=eval)
+        P = surface_skel(T,f)
+    elif skel_mode == 'l':
+        P = line_skel(T,f,mode=eval)
+        P=remove_borders(P)
     else:
-        P = point_skel(T,T>0,mode=eval)
+        P = point_skel(T,f,mode=eval)
 
 
     print('Saving')

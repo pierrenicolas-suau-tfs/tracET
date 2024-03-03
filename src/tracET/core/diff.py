@@ -3,6 +3,7 @@ Function implementing differentioal geometry operations on tomograms
 """
 
 import numpy as np
+import scipy
 from supression import desyevv, nonmaxsup_0, nonmaxsup_1, nonmaxsup_2
 
 
@@ -87,16 +88,28 @@ def diff3d(T, k):
 
 def eig3dk(Ixx, Iyy, Izz, Ixy, Ixz, Iyz):
     """
-
+    Resolve the eigenvalues and eigenvectors problem of a tensor of a 3D map given by maps of its components
     Args:
-        Ixx:
-        Iyy:
-        Izz:
-        Ixy:
-        Ixz:
-        Iyz:
+        Ixx: Component xx of the tensor
+        Iyy: Component yy of the tensor
+        Izz: Component zz of the tensor
+        Ixy: Component xy of the tensor
+        Ixz: Component xz of the tensor
+        Iyz: Component yz of the tensor
 
     Returns:
+        L1: Map of the first eigenvalue
+        L2: Map of the second eigenvalue
+        L3: Map of the third eigenvalue
+        V1x: Map of the x component of the first eigenvector
+        V1y: Map of the y component of the first eigenvector
+        V1z: Map of the z component of the first eigenvector
+        V2x: Map of the x component of the second eigenvector
+        V2y: Map of the y component of the second eigenvector
+        V2z: Map of the z component of the second eigenvector
+        V3x: Map of the x component of the third eigenvector
+        V3y: Map of the y component of the third eigenvector
+        V3z: Map of the z component of the third eigenvector
 
     """
 
@@ -251,9 +264,31 @@ def nonmaxsup_point(I, M, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z):
     V2xr = np.swapaxes(V2x.astype(np.float32), 0, 2).flatten()
     V2yr = np.swapaxes(V2y.astype(np.float32), 0, 2).flatten()
     V2zr = np.swapaxes(V2z.astype(np.float32), 0, 2).flatten()
-    V3xr = np.swapaxes(V2x.astype(np.float32), 0, 2).flatten()
-    V3yr = np.swapaxes(V2y.astype(np.float32), 0, 2).flatten()
-    V3zr = np.swapaxes(V2z.astype(np.float32), 0, 2).flatten()
+    V3xr = np.swapaxes(V3x.astype(np.float32), 0, 2).flatten()
+    V3yr = np.swapaxes(V3y.astype(np.float32), 0, 2).flatten()
+    V3zr = np.swapaxes(V3z.astype(np.float32), 0, 2).flatten()
+
+    Ir[np.isnan(Ir)]=np.float32(0)
+    Ir[np.isinf(Ir)]=np.float32(0)
+    V1xr[np.isnan(V1xr)] = np.float32(0)
+    V1xr[np.isinf(V1xr)] = np.float32(0)
+    V1yr[np.isnan(V1yr)] = np.float32(0)
+    V1yr[np.isinf(V1yr)] = np.float32(0)
+    V1zr[np.isnan(V1zr)] = np.float32(0)
+    V1zr[np.isinf(V1zr)] = np.float32(0)
+    V2xr[np.isnan(V2xr)] = np.float32(0)
+    V2xr[np.isinf(V2xr)] = np.float32(0)
+    V2yr[np.isnan(V2yr)] = np.float32(0)
+    V2yr[np.isinf(V2yr)] = np.float32(0)
+    V2zr[np.isnan(V2zr)] = np.float32(0)
+    V2zr[np.isinf(V2zr)] = np.float32(0)
+    V3xr[np.isnan(V3xr)] = np.float32(0)
+    V3xr[np.isinf(V3xr)] = np.float32(0)
+    V3yr[np.isnan(V3yr)] = np.float32(0)
+    V3yr[np.isinf(V3yr)] = np.float32(0)
+    V3zr[np.isnan(V3zr)] = np.float32(0)
+    V3zr[np.isinf(V3zr)] = np.float32(0)
+
 
     dim = np.array([Nx, Ny]).astype('uint32')
 
@@ -277,3 +312,43 @@ def nonmaxsup_point(I, M, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z):
     del H
 
     return B
+
+def prepare_input(tomo:np.ndarray, sigma=3,bin=False, imf=None)->np.ndarray:
+    """
+    Function to adapt the output for analisis. If is a binary map segmentation, it engross as a distance transformation.
+    If not, it could apply a mask.
+    :param tomo: Input: A scalar or binary map
+    :param sigma: Standar desviation for the gaussian filter
+    :param bin: True if the input is a binary map
+    :param imf: Threshold for filter masc
+    :return: A scalar map after mask and gaussian filters.
+    """
+    if bin:
+        tomo_seg = tomo > 0
+        tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(tomo_seg)
+        tomo_dsts = angauss(tomo_dsts,sigma)
+        mask = np.zeros_like(tomo)
+        if imf is None:
+            mask[tomo_dsts > 0] = 1
+        else:
+            mask[tomo_dsts > imf] = 1
+        tomo_dsts = tomo_dsts * mask
+    else:
+        if imf == None:
+            mask = np.ones_like(tomo)
+        else:
+            mask = np.zeros_like(tomo)
+            mask[tomo > imf] = 1
+        tomo_dsts = angauss(tomo * mask,sigma)
+    return (tomo_dsts)
+
+def remove_borders(tomo:np.ndarray)->np.ndarray:
+    Nx,Ny,Nz=np.shape(tomo)
+    M=np.ones((Nx,Ny,Nz))
+    M[0:10,:,:]=0
+    M[:,0:10,:]=0
+    M[:,:,0:10]=0
+    M[Nx-10:Nx-1,:,:]=0
+    M[:,Ny-10:Ny-1,:]=0
+    M[:,:,Nz-10:Nz-1]=0
+    return(tomo*M)

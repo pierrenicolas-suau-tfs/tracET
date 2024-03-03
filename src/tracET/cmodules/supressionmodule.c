@@ -621,7 +621,7 @@ static PyObject * supression_nonmaxsup_point(PyObject *self, PyObject *args)
 	unsigned int* F ;
 
 
-	if (!PyArg_ParseTuple(args,"OOOOOOOOO000",&I_array,&V1x_array,&V1y_array,&V1z_array,&V2x_array,&V2y_array,&V2z_array,&V3x_array,&V3y_array,&V3z_array,&M_array,&dim_array)){
+	if (!PyArg_ParseTuple(args,"OOOOOOOOOOOO",&I_array,&V1x_array,&V1y_array,&V1z_array,&V2x_array,&V2y_array,&V2z_array,&V3x_array,&V3y_array,&V3z_array,&M_array,&dim_array)){
 	    printf("ERROR: supression_nonmaxsup_line: Unable to load inputs.\n");
 	    PyErr_SetString(PyExc_TypeError, "Unable to load inputs.\n");
 		return NULL;}

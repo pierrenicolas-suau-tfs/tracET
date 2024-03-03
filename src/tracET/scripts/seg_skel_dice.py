@@ -25,7 +25,7 @@ import getopt
 import numpy as np
 
 from src.tracET.core import lio
-from src.tracET.metrics import cs_dice, cl_dice_soft, pt_dice
+from src.tracET.metrics.dice2 import cs_dice, cl_dice, pt_dice
 
 
 def print_help_msg():
@@ -52,7 +52,7 @@ def main(argv):
     ibin, tbin = None, None
     ifilt, tfilt= None, None
     try:
-        opts, args = getopt.getopt(argv, "hi:g:m:o:t:d:b:B:f:F",["help", "itomo", "igt", "mode", "otomo",
+        opts, args = getopt.getopt(argv, "hi:g:m:o:t:d:b:B:f:F:",["help", "itomo", "igt", "mode", "otomo",
                                                                            "ogt", "dil", "ibin", "tbin", "ifilt", "tfilt"])
     except getopt.GetoptError:
         print_help_msg()
@@ -138,11 +138,11 @@ def main(argv):
 
     # Compute the appropriate metric
     if skel_mode == 's':
-        results = cs_dice(tomo, tomo_gt, dilation=it_dil)
+        results = cs_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_imf=ifilt, tomo_gt_bin=tbin, gt_imf=tfilt)
     elif skel_mode == 'l':
-        results = cl_dice_soft(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_gt_bin=tbin, imf=ifilt, tf=tfilt)
+        results = cl_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_imf=ifilt, tomo_gt_bin=tbin, gt_imf=tfilt)
     elif skel_mode == 'b':
-        results = pt_dice(tomo, tomo_gt, dilation=it_dil)
+        results = pt_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_imf=ifilt, tomo_gt_bin=tbin, gt_imf=tfilt)
     else:
         print('Mode \'' + skel_mode + '\' not implemented!')
 

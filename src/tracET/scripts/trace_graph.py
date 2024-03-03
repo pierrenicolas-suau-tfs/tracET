@@ -1,7 +1,9 @@
 
-import sys, getopt, time
-from vtk_uts import *
+import sys, os, getopt, time
+from src.tracET.core.vtk_uts import *
 from src.tracET.core import lio
+from src.tracET.representation.graphs import *
+#import nrrd
 import pandas as pd
 
 def main(argv):
