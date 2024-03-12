@@ -1,6 +1,6 @@
-[build-sistem]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "tracET"
@@ -9,10 +9,9 @@ authors = [
     {name = "Pelayo Alvarez-Brecht"},
     {name = "Antonio Martinez-Sanchez"}
 ]
-description = "A package that could transform a scalar map in a point cloud, trace a graph for filaments and compute "
-                "the dice metric for two segmentations. "
+description = "A package that could transform a scalar map in a point cloud, trace a graph for filaments and compute the dice metric for two segmentations. "
 readme = "README.md"
-classifiers = []
+classifiers = ["Programming Language :: Python :: 3"]
 [project.urls]
-Homepage =
-Issues =
+Homepage ="https://guithub.com/PelayoAlvarezBrecht/tracer/tree/nih/"
+

@@ -112,11 +112,11 @@ def main(argv):
         P = surface_skel(T,f)
     elif skel_mode == 'l':
         P = line_skel(T,f,mode=eval)
-        P=remove_borders(P)
+
     else:
         P = point_skel(T,f,mode=eval)
 
-
+    P = remove_borders(P)
     print('Saving')
     if os.path.splitext(out_tomo)[1] == '.mrc':
         lio.write_mrc(P.astype(np.float32), out_tomo)
