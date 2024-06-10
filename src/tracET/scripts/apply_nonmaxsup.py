@@ -8,19 +8,22 @@ import numpy as np
 
 from src.tracET.core import lio
 from src.tracET.core.skel import surface_skel, line_skel,point_skel
-from src.tracET.core.diff import prepare_input,remove_borders
+from src.tracET.core.diff import prepare_input,remove_borders,downsample_3d
 
 def main(argv):
+    start=time.time()
     # Input parsing
     in_tomo,s=None,None
     eval,skel_mode=None,None
     ibin=None
     f=None
     out_tomo=None
+    downsample=None
+
     try:
-        opts, args = getopt.getopt(argv, "hi:s:e:m:b:f:o:",["help","itomo","sdesv","eval","smode","ibin","filt","otomo"])
+        opts, args = getopt.getopt(argv, "hi:s:e:m:b:f:d:o:",["help","itomo","sdesv","eval","smode","ibin","filt","downs","otomo"])
     except getopt.GetoptError:
-        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
+        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -d <downsample> -o <out_tomo>')
         sys.exit()
     for opt, arg in opts:
         if opt in ("-h","--help"):
@@ -34,6 +37,7 @@ def main(argv):
             print('\t-b (--ibin) <binary input> True if the input is a binary map, it create a distance transformation'
                   'at the begining. (optional, default False)')
             print('\t-f (--filt) <filter> filter for the mask (optional, default 1)')
+            print('\t-d (--downs) <downsample> radius in voxels to downsample the skeketons. (optional,default is 0)')
             print('\t-o (--otomo) <out_tomo> output binary tomogram (point cloud)')
             sys.exit()
         elif opt in ("-i","--itomo"):
@@ -54,9 +58,11 @@ def main(argv):
                 print('The input evec must be "s" (surface), "l" (linear) or "b" (blob)!')
                 sys.exit()
         elif opt in ("-b","--ibin"):
-            ibin=bool(arg)
+            ibin=bool(int(arg))
         elif opt in ("-f","--filt"):
             f = float(arg)
+        elif opt in ("-d","--downs"):
+            downsample=float(arg)
         elif opt in ("-o","--otomo"):
             out_tomo = arg
             if not(os.path.splitext(out_tomo)[1] in ('.mrc', '.nhdr', '.nrrd')):
@@ -87,7 +93,7 @@ def main(argv):
     if eval is not None:
         print('Use ',eval, ' eigenvalues')
     else:
-        eval="hessian"
+        eval='hessian'
         print('Default: Use ', eval, ' eigenvalues')
     if skel_mode is not None:
         print('Structure to analysis',skel_mode)
@@ -95,11 +101,21 @@ def main(argv):
         print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
         print('Almost an input sdesv parameter -s must be provided!')
         sys.exit()
+    if ibin is not None:
+        print('Binary mode: ',str(ibin))
+    else:
+        ibin=False
+        print('Default: Binary mode ',str(ibin))
     if f is not None:
         print ('Trheshold filter in the masc is ',str(f))
     else:
         f=5
         print('Default: Trheshold filter in the masc is ', str(f))
+    if downsample is not None:
+        print('downsampled applied with ',str(downsample),' voxels')
+    else:
+        downsample=0
+        print('Default. Not downsampled')
     if out_tomo is not None:
         print ('Output tomogram: ',out_tomo)
     else:
@@ -108,6 +124,8 @@ def main(argv):
         sys.exit()
 
     T=prepare_input(T,sigma=s,bin=ibin,imf=None)
+    sal_time=time.time()
+    print('The saliency map lasted ', str(sal_time - start), ' s in execute')
     if skel_mode == 's':
         P = surface_skel(T,f)
     elif skel_mode == 'l':
@@ -117,12 +135,14 @@ def main(argv):
         P = point_skel(T,f,mode=eval)
 
     P = remove_borders(P)
+    P = downsample_3d(P,skel_dsample=downsample)
     print('Saving')
     if os.path.splitext(out_tomo)[1] == '.mrc':
         lio.write_mrc(P.astype(np.float32), out_tomo)
     else:
         nrrd.write(out_tomo, P)
-
+    end = time.time()
+    print ('The nms lasted ',str(end-sal_time),' s in execute')
     print('Successfully terminated. (' + time.strftime("%c") + ')')
 
 

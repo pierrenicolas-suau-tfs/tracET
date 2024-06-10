@@ -55,6 +55,9 @@ def make_skeleton_graph(T:np.ndarray,r:float,subsample=0)->tuple:
         coords=np.array(subsample_pcloud(coords.tolist(),subsample))
     graph_array = sklearn.neighbors.radius_neighbors_graph(coords, r)
     return coords, graph_array
+def add_coords_to_graph(G,coords):
+    for i,node in enumerate(G.nodes()):
+        G.nodes[node]['Coords'] = coords[i]
 
 ##Split in components
 def split_into_components(sparse_matrix,node_coordinates):
@@ -66,6 +69,7 @@ def split_into_components(sparse_matrix,node_coordinates):
     :return: component coordinates: list of numpy arrays with coordinates of nodes of connect components
     """
     graph = nx.from_scipy_sparse_array(sparse_matrix)
+    add_coords_to_graph(graph,node_coordinates)
     components = list(nx.connected_components(graph))
 
     component_matrices = []
@@ -74,8 +78,9 @@ def split_into_components(sparse_matrix,node_coordinates):
         subgraph = graph.subgraph(component)
         component_matrix = nx.to_scipy_sparse_array(subgraph)
         component_matrices.append(component_matrix)
-        component_nodes = list(component)
-        component_coords = node_coordinates[component_nodes]
+        #component_nodes = list(component)
+        component_coords = [subgraph.nodes[node]['Coords'] for node in subgraph]
+        #component_coords = node_coordinates[component_nodes]
         component_coordinates.append(component_coords)
 
     return component_matrices,component_coordinates
@@ -118,3 +123,130 @@ def remove_branches(sparse_graph,node_coordinates):
         path_coords=np.delete(path_coords,endpoints[1:len(endpoints)-1],axis=0)
     sparse_clean_graph=(nx.to_scipy_sparse_array(clean_graph))
     return sparse_clean_graph,path_coords
+
+def angle_3points(Point1,Point2,Point3):
+    """
+
+    :param Point1:
+    :param Point2:
+    :param Point3:
+    :return:
+    """
+    vec12=Point2-Point1
+    vec32=Point2-Point3
+    mod_12=np.linalg.norm(vec12)
+    mod_32=np.linalg.norm(vec32)
+    scalar=np.dot(vec12,vec32)
+    angle = np.arccos(scalar/mod_12/mod_32)
+    if np.isnan(angle) == False:
+        return angle
+    else:
+        return 0
+
+
+def add_duplicate_node(G, index):
+    atriv=G.nodes[index]
+    new_id=max(G.nodes)+1
+    G.add_node(new_id, **atriv)
+    return new_id
+def count_elements(array,subsets):
+    return [next((i for i, subset in enumerate(subsets) if num in subset), -1) for num in array]
+def label_branches(sparse_graph,coords):
+    graph = nx.from_scipy_sparse_array(sparse_graph)
+    add_coords_to_graph(graph,coords)
+    nodes=graph.nodes()
+    id_nodes=list(nodes)
+    for i in range(len(id_nodes)):
+        nodes_neig=list(graph.neighbors(id_nodes[i]))
+        if len(nodes_neig)>2:
+            if i == 0:
+                continue
+            elif i== len(id_nodes):
+                continue
+            else:
+                node1=nodes[i-1]['Coords']
+                node2=nodes[i]['Coords']
+                angles=[]
+                #del nodes_neig[id_nodes[i-1]]
+                for j in range(len(nodes_neig)):
+                    angles.append(angle_3points(node1,node2,nodes[nodes_neig[j]]['Coords']))
+                angles=np.array(angles)
+                cont_index=np.where(angles==max(angles))[0][0]
+
+                del nodes_neig[cont_index]
+                for j in range(len(nodes_neig)):
+                    graph.remove_edge(i,nodes_neig[j])
+                    new_node=add_duplicate_node(graph,i)
+                    graph.add_edge(nodes_neig[j],new_node)
+
+    branches = nx.connected_components(graph)
+    branches_matrices = []
+
+    for branch in branches:
+        nodes_mat=[]
+        for node in branch:
+            nodes_mat.append(node)
+        branches_matrices.append(nodes_mat)
+        #component_nodes = list(component)
+    L_branches=count_elements(nodes,branches_matrices)
+    new_coords = [graph.nodes[node]['Coords'] for node in graph]
+    new_sparse_graph = nx.to_scipy_sparse_array(graph)
+    return new_sparse_graph, np.array(new_coords), np.array(L_branches)
+
+def label_branches2(sparse_graph,coords):
+    graph = nx.from_scipy_sparse_array(sparse_graph)
+    add_coords_to_graph(graph,coords)
+    nodes=graph.nodes()
+    id_nodes=list(nodes)
+    for i in range(len(id_nodes)):
+        nodes_neig=list(graph.neighbors(id_nodes[i]))
+        if len(nodes_neig)>2:
+            if i == 0:
+                continue
+            elif i== len(id_nodes):
+                continue
+            else:
+
+                node=nodes[i]['Coords']
+                angles=np.zeros((len(nodes_neig),len(nodes_neig)))
+                #del nodes_neig[id_nodes[i-1]]
+                for j in range(len(nodes_neig)):
+                    for k in range(len(nodes_neig)):
+                        angles[j,k]=angle_3points(nodes[nodes_neig[j]]['Coords'],node,nodes[nodes_neig[k]]['Coords'])
+                angles=np.triu(np.array(angles))
+                cont_index=np.unravel_index(np.argmax(angles), angles.shape)
+
+                del nodes_neig[cont_index[0]]
+                del nodes_neig[cont_index[1]-1]
+
+                for j in range(len(nodes_neig)):
+                    graph.remove_edge(i,nodes_neig[j])
+                    new_node=add_duplicate_node(graph,i)
+                    graph.add_edge(nodes_neig[j],new_node)
+
+    branches = nx.connected_components(graph)
+    branches_matrices = []
+
+    for branch in branches:
+        nodes_mat=[]
+        for node in branch:
+            nodes_mat.append(node)
+        branches_matrices.append(nodes_mat)
+        #component_nodes = list(component)
+    L_branches=count_elements(nodes,branches_matrices)
+    new_coords = [graph.nodes[node]['Coords'] for node in graph]
+    new_sparse_graph = nx.to_scipy_sparse_array(graph)
+    return new_sparse_graph, np.array(new_coords), np.array(L_branches)
+
+
+def sort_branches(branch_graph, branch_coord):
+    graph = nx.from_scipy_sparse_array(branch_graph)
+    add_coords_to_graph(graph,branch_coord)
+    extrems = terminal_nodes(graph)
+    order= nx.shortest_path(graph,source=extrems[0],target=extrems[1])
+
+    sorted_coords=[graph.nodes[node]['Coords']for node in order]
+    return np.array(sorted_coords)
+
+
+

@@ -153,12 +153,13 @@ def point_skel(tomo: np.ndarray, f=1, mode='hessian') -> np.ndarray:
     tomo_z = diff3d(tomo, 2).astype(np.float32)
 
     # Hessian tensor
-    tomo_xx = diff3d(tomo_x, 0).flatten()
-    tomo_yy = diff3d(tomo_y, 1).flatten()
-    tomo_zz = diff3d(tomo_z, 2).flatten()
-    tomo_xy = diff3d(tomo_x, 1).flatten()
-    tomo_xz = diff3d(tomo_x, 2).flatten()
-    tomo_yz = diff3d(tomo_y, 2).flatten()
+
+    tomo_xx = np.swapaxes(diff3d(tomo_x, 0), 0, 2).flatten()
+    tomo_yy = np.swapaxes(diff3d(tomo_y, 1), 0, 2).flatten()
+    tomo_zz = np.swapaxes(diff3d(tomo_z, 2), 0, 2).flatten()
+    tomo_xy = np.swapaxes(diff3d(tomo_x, 1), 0, 2).flatten()
+    tomo_xz = np.swapaxes(diff3d(tomo_x, 2), 0, 2).flatten()
+    tomo_yz = np.swapaxes(diff3d(tomo_y, 2), 0, 2).flatten()
     if mode != 'structure':
         del tomo_x
         del tomo_y
@@ -171,7 +172,7 @@ def point_skel(tomo: np.ndarray, f=1, mode='hessian') -> np.ndarray:
      tomo_v3x, tomo_v3y, tomo_v3z) = desyevv(tomo_xx, tomo_yy, tomo_zz, tomo_xy, tomo_xz, tomo_yz)
     if mode != 'structure':
 
-        tomo_l1 = np.swapaxes(np.reshape(tomo_l1, (Nz, Ny, Nx)), 0, 2)
+        tomo_l1 = np.swapaxes(np.reshape(-tomo_l1, (Nz, Ny, Nx)), 0, 2)
         tomo_v1x = np.swapaxes(np.reshape(tomo_v1x, (Nz, Ny, Nx)), 0, 2)
         tomo_v1y = np.swapaxes(np.reshape(tomo_v1y, (Nz, Ny, Nx)), 0, 2)
         tomo_v1z = np.swapaxes(np.reshape(tomo_v1z, (Nz, Ny, Nx)), 0, 2)
@@ -205,6 +206,8 @@ def point_skel(tomo: np.ndarray, f=1, mode='hessian') -> np.ndarray:
          tomo_v1x, tomo_v1y, tomo_v1z,
          tomo_v2x, tomo_v2y, tomo_v2z,
          tomo_v3x, tomo_v3y, tomo_v3z) = desyevv(tomo_xx, tomo_yy, tomo_zz, tomo_xy, tomo_xz, tomo_yz)
+
+        tomo_l1 = np.swapaxes(np.reshape(-tomo_l1, (Nz, Ny, Nx)), 0, 2)
         tomo_v1x = np.swapaxes(np.reshape(tomo_v1x, (Nz, Ny, Nx)), 0, 2)
         tomo_v1y = np.swapaxes(np.reshape(tomo_v1y, (Nz, Ny, Nx)), 0, 2)
         tomo_v1z = np.swapaxes(np.reshape(tomo_v1z, (Nz, Ny, Nx)), 0, 2)
@@ -216,4 +219,4 @@ def point_skel(tomo: np.ndarray, f=1, mode='hessian') -> np.ndarray:
         tomo_v3z = np.swapaxes(np.reshape(tomo_v3z, (Nz, Ny, Nx)), 0, 2)
 
     # Non-maximum suppression
-    return nonmaxsup_point(-tomo_l1,tomo_l1>f, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z, tomo_v3x, tomo_v3y, tomo_v3z)
+    return nonmaxsup_point(tomo_l1,tomo_l1>f, tomo_v1x, tomo_v1y, tomo_v1z, tomo_v2x, tomo_v2y, tomo_v2z, tomo_v3x, tomo_v3y, tomo_v3z)

@@ -3,6 +3,7 @@ import sys, os, getopt, time
 from src.tracET.core.vtk_uts import *
 from src.tracET.core import lio
 from src.tracET.representation.graphs import *
+from src.tracET.representation.curve import *
 #import nrrd
 import pandas as pd
 
@@ -93,26 +94,22 @@ def main(argv):
 
     print('Calculating the graph')
     [coords, graph_array] =make_skeleton_graph(T,float(r),float(s))
-    #Targets_0, Sources_0 = (graph_array.nonzero())
-    #unproceseed_points_poly = make_graph_polydata(coords, Sources_0, Targets_0)
-    #save_vtp(unproceseed_points_poly, main_dir + os.path.splitext(in_tomo)[0] + '_unprocessed_skel_graph.vtp')
+
     print('Spliting in components')
     [graph_ar_comps,coords_comps]=split_into_components(graph_array,coords)
     print('Making graphs line like and save')
     tubule_list=np.zeros(len(coords))
+    branch_list=np.zeros(len(coords))
+    b=0
     a=0
+    out_poly = vtk.vtkPolyData()
     #append_comps = vtk.vtkAppendPolyData()
     for i in range(len(graph_ar_comps)):
         print('Procesing tubule ',str(i))
-        #Targets_comp, Sources_comp = (graph_ar_comps[i].nonzero())
-        #comp_points_poly = make_graph_polydata(coords_comps[i], Sources_comp, Targets_comp)
-        #save_vtp(comp_points_poly, main_dir +'comps/'+ os.path.splitext(in_tomo)[0] + '_comp_'+str(i)+'_skel_graph.vtp')
+
         print('Removing cycles')
         L_graph=spannig_tree_apply(graph_ar_comps[i])
-        #Targets_nc, Sources_nc = (L_graph.nonzero())
-        #nc_points_poly = make_graph_polydata(coords_comps[i], Sources_nc, Targets_nc)
-        #save_vtp(nc_points_poly,main_dir + 'comps/' + os.path.splitext(in_tomo)[0] + '_comp_' + str(i) + 'nc_skel_graph.vtp')
-       # L_graph=remove_cycles(L_graph)
+
         if t=='l':
             print('For a linear filament, we remove the shortest branches')
             L_coords = coords_comps[i]
@@ -123,48 +120,40 @@ def main(argv):
         else:
             print('For a net, we leave the branches')
             L_graph,L_coords,L_branches=label_branches2(L_graph,coords_comps[i])
-            #L_coords=coords_comps[i]
+
 
         ##curve processign
-        ##graph_branch_coords_branch = split_into_components(L_graph,L_coords)
+        graphs_branch,coords_branchs = split_into_components(L_graph,L_coords)
+        for j in range(len(graphs_branch)):
+            print('Processing branch '+str(j))
+            if len(coords_branchs[j])>1:
+                sorted_coords=sort_branches(graphs_branch[j],coords_branchs[j])
+                curve = SpaceCurve(sorted_coords)
+                curve_poly = curve.get_vtp()
+                add_label_to_poly(curve_poly, i, 'Component')
+                add_label_to_poly(curve_poly, j, 'Branch')
+
+                out_poly = merge_polys(out_poly, curve_poly)
+            try:
+                branch_list[b:b + len(coords_branchs[j])] = j * np.ones(len(coords_branchs[j]))
+
+                b = b + len(coords_branchs[j])
+            except ValueError:
+                continue
 
 
 
-        print('Make polydata')
-        Targets, Sources = (L_graph.nonzero())
-        if i == 0:
-            points_poly0 = make_graph_polydata(L_coords,Sources,Targets)
-            add_label_to_poly(points_poly0,i,'component')
-            add_labels_to_poly(points_poly0, L_branches, 'branches')
-        elif i == 1:
-            points_poly1 = make_graph_polydata(L_coords,Sources,Targets)
-            add_label_to_poly(points_poly1, i, 'component')
-            add_labels_to_poly(points_poly1, L_branches, 'branches')
-            points_poly = merge_polys(points_poly0,points_poly1)
-        else:
-            points_polyi= make_graph_polydata(L_coords,Sources,Targets)
-            add_label_to_poly(points_polyi, i, 'component')
-            add_labels_to_poly(points_polyi, L_branches, 'branches')
-            points_poly = merge_polys(points_poly,points_polyi)
-        #append_comps.AddInputData(points_poly)
-        #print('Saving')
-        #save_vtp(points_poly, main_dir+ out_dir + os.path.splitext(in_tomo)[0]+ '_skel_graph_tubule_'+str(i)+'.vtp')
-        #print(os.path.splitext(in_tomo)[0]+ '_skel_graph_tubule_'+str(i)+'.vtp'+' saved in '+main_dir+out_dir)
+
         tubule_list[a:a+len(coords_comps[i])]=i*np.ones(len(coords_comps[i]))
         a=a+len(coords_comps[i])
-    out_mat=np.zeros((len(coords),4))
+    out_mat=np.zeros((len(coords),5))
     out_mat[:,0]=tubule_list
-    out_mat[:,1:4]=coords
-    out_pd=pd.DataFrame(data=out_mat,columns=['Filament','X','Y','Z'])
+    out_mat[:,1]=branch_list
+    out_mat[:,2:5]=coords
+    out_pd=pd.DataFrame(data=out_mat,columns=['Component','Branch','X','Y','Z'])
     out_pd.to_csv(main_dir+os.path.splitext(in_tomo)[0]+ '_skel_graph.csv')
-    #append_comps.Update()
-    #complete_graph_poly = append_comps.GetOutput()
-    #add_atributte_to_poly(complete_graph_poly,np.array(tubule_list).astype(np.float32),'component')
-    #tubule_data=complete_graph_poly.GetPointData().GetArray('component')
-    #tubule_values=[]
-    #for i in range(tubule_data.GetNumberOfTuples()):
-        #tubule_values.append(tubule_data.GetValue(i))
-    save_vtp(points_poly, main_dir + os.path.splitext(in_tomo)[0] + '_skel_graph.vtp')
+
+    save_vtp(out_poly, main_dir + os.path.splitext(in_tomo)[0] + '_skel_graph.vtp')
     end = time.time()
     print('The program lasted ', str(end - start), ' s in execute')
     print('Successfully terminated. (' + time.strftime("%c") + ')')

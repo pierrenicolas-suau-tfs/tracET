@@ -36,14 +36,16 @@ def print_help_msg():
     print('python', os.path.basename(__file__), '-i <in_tomo> -g <gt_tomo> -m <skel_mode>')
     print('\t-i (--itomo) <in_tomo> input tomogram')
     print('\t-g (--igt) <gt_tomo> ground truth tomogram')
-    print('\t-m (--mode) <skel_mode> structural mode for computing the skeleton: '
-          '\'s\' surface, \'l\' line and \'b\' blob ')
+    print('\t-m (--mode) <skel_mode> structural mode for computing the skeleton: \'s\' surface, \'l\' line and \'b\' blob ')
     print('\t-o (--otomo) <out_tomo_skel> (optional) path to store the skeleton generated of the tomogram')
     print('\t-t (--ogt) <out_gt_skel> (optional) path to store the skeleton generated of the ground truth')
     print('\t-d (--dil) <dilaton> (optional) number of iterations to pre-dilate (make thicker) the input segmantations')
+    print('\t-f (--ifilt)  <ifilter> filter for the mask for the input tomogram. (optional, default 1)')
+    print('\t-F (--tfilt)  <ifilter> filter for the mask for the ground truth tomogram.(optional, default 1)')
 
 
 def main(argv):
+    start = time.time()
     # Input parsing
     in_tomo, in_tomo_gt = None, None
     skel_mode = None
@@ -166,6 +168,8 @@ def main(argv):
         else:
             nrrd.write(out_tomo_gt_skel, results[4].astype(np.int8))
 
+    end = time.time()
+    print('The program lasted ', str(end - start), ' s in execute')
     print('Successfully terminated. (' + time.strftime("%c") + ')')
 
 

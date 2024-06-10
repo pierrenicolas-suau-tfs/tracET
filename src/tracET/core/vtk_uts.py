@@ -71,6 +71,65 @@ def make_graph_polydata(coords,source,target):
     poly= producer.GetOutput()
     return(poly)
 
+def add_atributte_to_poly(poly, array, att_name):
+    vtk_scalar_values = vtk.vtkFloatArray()
+    vtk_scalar_values.SetNumberOfValues(len(array))
+    vtk_scalar_values.SetArray(array, len(array), 1)
+
+    poly.GetPointData().AddArray(vtk_scalar_values)
+    poly.GetPointData().GetArray(poly.GetPointData().GetNumberOfArrays() - 1).SetName(att_name)
+
+def merge_polys(poly_1, poly_2):
+    """
+    Merges two input poly_data in single one
+    :param poly_1: input poly_data 1
+    :param poly_2: input poly_data 2
+    :return: an poly_data that merges the two inputs
+    """
+    assert isinstance(poly_1, vtk.vtkPolyData) and isinstance(poly_2, vtk.vtkPolyData)
+    app_flt = vtk.vtkAppendPolyData()
+    app_flt.AddInputData(poly_1)
+    app_flt.AddInputData(poly_2)
+    app_flt.Update()
+    return app_flt.GetOutput()
+
+
+def add_label_to_poly(poly, lbl, p_name):
+    """
+    Add a label to all cells in a poly_data
+    :param poly: input poly_data
+    :param lbl: label (integer) value
+    :p_name: property name used for labels, if not exist in poly_dota is created
+    """
+    assert isinstance(poly, vtk.vtkPolyData)
+    lbl, p_name = int(lbl), str(p_name)
+    arr = vtk.vtkIntArray()
+    n_cells = poly.GetNumberOfCells()
+    arr.SetName(p_name)
+    arr.SetNumberOfComponents(1)
+    arr.SetNumberOfValues(n_cells)
+    for i in range(n_cells):
+        arr.SetValue(i, lbl)
+    poly.GetCellData().AddArray(arr)
+def add_labels_to_poly(poly, lbl, p_name):
+    """
+    Add a label to all cells in a poly_data
+    :param poly: input poly_data
+    :param lbl: array of label (integer) values
+    :p_name: property name used for labels, if not exist in poly_dota is created
+    """
+    assert isinstance(poly, vtk.vtkPolyData)
+    assert isinstance(lbl,np.ndarray)
+    lbl, p_name = lbl, str(p_name)
+    arr = vtk.vtkIntArray()
+    n_points = poly.GetNumberOfPoints()
+    arr.SetName(p_name)
+    arr.SetNumberOfComponents(1)
+    arr.SetNumberOfValues(n_points)
+    for i in range(n_points):
+        arr.SetValue(i, int(lbl[i]))
+    poly.GetPointData().AddArray(arr)
+
 def save_vtp(poly, fname):
     """
     Store data vtkPolyData as a .vtp file

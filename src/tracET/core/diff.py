@@ -4,6 +4,7 @@ Function implementing differentioal geometry operations on tomograms
 
 import numpy as np
 import scipy
+import open3d as o3d
 from supression import desyevv, nonmaxsup_0, nonmaxsup_1, nonmaxsup_2
 
 
@@ -268,26 +269,26 @@ def nonmaxsup_point(I, M, V1x, V1y, V1z, V2x, V2y, V2z, V3x, V3y, V3z):
     V3yr = np.swapaxes(V3y.astype(np.float32), 0, 2).flatten()
     V3zr = np.swapaxes(V3z.astype(np.float32), 0, 2).flatten()
 
-    Ir[np.isnan(Ir)]=np.float32(0)
-    Ir[np.isinf(Ir)]=np.float32(0)
-    V1xr[np.isnan(V1xr)] = np.float32(0)
-    V1xr[np.isinf(V1xr)] = np.float32(0)
-    V1yr[np.isnan(V1yr)] = np.float32(0)
-    V1yr[np.isinf(V1yr)] = np.float32(0)
-    V1zr[np.isnan(V1zr)] = np.float32(0)
-    V1zr[np.isinf(V1zr)] = np.float32(0)
-    V2xr[np.isnan(V2xr)] = np.float32(0)
-    V2xr[np.isinf(V2xr)] = np.float32(0)
-    V2yr[np.isnan(V2yr)] = np.float32(0)
-    V2yr[np.isinf(V2yr)] = np.float32(0)
-    V2zr[np.isnan(V2zr)] = np.float32(0)
-    V2zr[np.isinf(V2zr)] = np.float32(0)
-    V3xr[np.isnan(V3xr)] = np.float32(0)
-    V3xr[np.isinf(V3xr)] = np.float32(0)
-    V3yr[np.isnan(V3yr)] = np.float32(0)
-    V3yr[np.isinf(V3yr)] = np.float32(0)
-    V3zr[np.isnan(V3zr)] = np.float32(0)
-    V3zr[np.isinf(V3zr)] = np.float32(0)
+    #Ir[np.isnan(Ir)]=np.float32(0)
+    #Ir[np.isinf(Ir)]=np.float32(0)
+    #V1xr[np.isnan(V1xr)] = np.float32(0)
+    #V1xr[np.isinf(V1xr)] = np.float32(0)
+    #V1yr[np.isnan(V1yr)] = np.float32(0)
+    #V1yr[np.isinf(V1yr)] = np.float32(0)
+    #V1zr[np.isnan(V1zr)] = np.float32(0)
+    #V1zr[np.isinf(V1zr)] = np.float32(0)
+    #V2xr[np.isnan(V2xr)] = np.float32(0)
+    #V2xr[np.isinf(V2xr)] = np.float32(0)
+    #V2yr[np.isnan(V2yr)] = np.float32(0)
+    #V2yr[np.isinf(V2yr)] = np.float32(0)
+    #V2zr[np.isnan(V2zr)] = np.float32(0)
+    #V2zr[np.isinf(V2zr)] = np.float32(0)
+    #V3xr[np.isnan(V3xr)] = np.float32(0)
+    #V3xr[np.isinf(V3xr)] = np.float32(0)
+    #V3yr[np.isnan(V3yr)] = np.float32(0)
+    #V3yr[np.isinf(V3yr)] = np.float32(0)
+    #V3zr[np.isnan(V3zr)] = np.float32(0)
+    #V3zr[np.isinf(V3zr)] = np.float32(0)
 
 
     dim = np.array([Nx, Ny]).astype('uint32')
@@ -336,6 +337,7 @@ def prepare_input(tomo:np.ndarray, sigma=3,bin=False, imf=None)->np.ndarray:
     else:
         if imf == None:
             mask = np.ones_like(tomo)
+            mask[tomo > 0] = 1
         else:
             mask = np.zeros_like(tomo)
             mask[tomo > imf] = 1
@@ -352,3 +354,24 @@ def remove_borders(tomo:np.ndarray)->np.ndarray:
     M[:,Ny-10:Ny-1,:]=0
     M[:,:,Nz-10:Nz-1]=0
     return(tomo*M)
+
+def downsample_3d(tomo_skel,skel_oliers=(None,None),skel_dsample=0):
+    skel_cloud = None
+    if (skel_oliers[0] is not None) and (skel_oliers[1] is not None):
+        skel_cloud = o3d.geometry.PointCloud()
+        skel_cloud.points = o3d.utility.Vector3dVector(np.argwhere(tomo_skel))
+        skel_cloud = skel_cloud.remove_radius_outlier(nb_points=skel_oliers[0], radius=skel_oliers[1])[0]
+    if skel_dsample > 0:
+        if skel_cloud is None:
+            skel_cloud = o3d.geometry.PointCloud()
+            skel_cloud.points = o3d.utility.Vector3dVector(np.argwhere(tomo_skel))
+        skel_cloud = skel_cloud.voxel_down_sample(voxel_size=skel_dsample)
+        # o3d.visualization.draw_geometries([skel_cloud])
+    if skel_cloud is not None:
+        tomo_skel_out = np.zeros(shape=tomo_skel.shape, dtype=bool)
+        points = np.asarray(skel_cloud.points, dtype=int)
+        for point in points:
+            tomo_skel_out[point[0], point[1], point[2]] = True
+    if skel_dsample == 0:
+        tomo_skel_out=np.copy(tomo_skel)
+    return (tomo_skel_out)
