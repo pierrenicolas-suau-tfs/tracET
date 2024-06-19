@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-#import nrrd
+import nrrd
 import getopt
 
 import numpy as np
@@ -14,31 +14,28 @@ def main(argv):
     start=time.time()
     # Input parsing
     in_tomo,s=None,None
-    eval,skel_mode=None,None
+    skel_mode=None
     ibin=None
     f=None
-    out_tomo=None
     downsample=None
 
     try:
-        opts, args = getopt.getopt(argv, "hi:s:e:m:b:f:d:o:",["help","itomo","sdesv","eval","smode","ibin","filt","downs","otomo"])
+        opts, args = getopt.getopt(argv, "hi:s:m:b:f:d:",["help","itomo","sdesv","smode","ibin","filt","downs"])
     except getopt.GetoptError:
-        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -d <downsample> -o <out_tomo>')
+        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -m <skel_mode> -b <binary_input> -f <filter> -d <downsample>')
         sys.exit()
     for opt, arg in opts:
         if opt in ("-h","--help"):
             print('python trace_graph.py -i <in_tomo> -r <radius> -s <subsampling> -o <out_dir>')
             print('\t-i (--itomo) <in_tomo> input tomogram')
-            print('\t-s (--sdesv) <smooth_desviation> desviation for gaussian filter (~1/3 tubule radium')
-            print('\t-e (--eval) <eigenvalues> type of eigenvalues and eigenvectors "Hessian" or "Struct"'
-                  ' (optional, default "Hessian")')
+            print('\t-s (--sdesv) <smooth_desviation> desviation for gaussian filter (~1/3 tubule radium)')
             print('\t-m (--mode) <skel_mode> structural mode for computing the skeleton: '
                   '\'s\' surface, \'l\' line and \'b\' blob ')
-            print('\t-b (--ibin) <binary input> True if the input is a binary map, it create a distance transformation'
-                  'at the begining. (optional, default False)')
-            print('\t-f (--filt) <filter> filter for the mask (optional, default 1)')
-            print('\t-d (--downs) <downsample> radius in voxels to downsample the skeketons. (optional,default is 0)')
-            print('\t-o (--otomo) <out_tomo> output binary tomogram (point cloud)')
+            print('\t-b (--ibin) <binary_input> 1 if the input is a binary map, it create a distance transformation'
+                  'at the begining. (optional, default 0, a scalar map)')
+            print('\t-f (--filt) <filter> filter for the mask (optional, default 0)')
+            print('\t-d (--downs) <downsample> radius in voxels to downsample the skeletons. (optional,default is 0)')
+
             sys.exit()
         elif opt in ("-i","--itomo"):
             in_tomo=arg
@@ -47,11 +44,7 @@ def main(argv):
                 sys.exit()
         elif opt in ("-s","--sdesv"):
             s=arg
-        elif opt in ("-e","eval"):
-            eval=arg
-            if not (eval in ('Hessian','Struct')):
-                print('The input eval must be "hessian" or "struct"!')
-                sys.exit()
+
         elif opt in ("-m", "smode"):
             skel_mode = arg
             if not (skel_mode in ('s', 'l', 'b')):
@@ -63,11 +56,7 @@ def main(argv):
             f = float(arg)
         elif opt in ("-d","--downs"):
             downsample=float(arg)
-        elif opt in ("-o","--otomo"):
-            out_tomo = arg
-            if not(os.path.splitext(out_tomo)[1] in ('.mrc', '.nhdr', '.nrrd')):
-                print('The output file must have a .mrc, .nhdr or nrrd extension!')
-                sys.exit()
+
         else:
             print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -v <eigenvectors> -f <filter> -o <out_tomo>')
             print("Inputs must be one of them!")
@@ -90,11 +79,7 @@ def main(argv):
         prin('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -m <skel_mode> -b <binary_input> -f <filter> -o <out_tomo>')
         print('Almost an input sdesv parameter -s must be provided!')
         sys.exit()
-    if eval is not None:
-        print('Use ',eval, ' eigenvalues')
-    else:
-        eval='hessian'
-        print('Default: Use ', eval, ' eigenvalues')
+
     if skel_mode is not None:
         print('Structure to analysis',skel_mode)
     else:
@@ -109,19 +94,14 @@ def main(argv):
     if f is not None:
         print ('Trheshold filter in the masc is ',str(f))
     else:
-        f=5
+        f=0
         print('Default: Trheshold filter in the masc is ', str(f))
     if downsample is not None:
         print('downsampled applied with ',str(downsample),' voxels')
     else:
         downsample=0
         print('Default. Not downsampled')
-    if out_tomo is not None:
-        print ('Output tomogram: ',out_tomo)
-    else:
-        print('python apply_nonmaxsup_pre.py -i <in_tomo> -s <smooth_desv> -e <eigenvalues> -v <eigenvectors> -f <filter> -o <out_tomo>')
-        print('Almost an output tomogram -o must be provided!')
-        sys.exit()
+
 
     T=prepare_input(T,sigma=s,bin=ibin,imf=None)
     sal_time=time.time()
@@ -129,18 +109,18 @@ def main(argv):
     if skel_mode == 's':
         P = surface_skel(T,f)
     elif skel_mode == 'l':
-        P = line_skel(T,f,mode=eval)
+        P = line_skel(T,f)
 
     else:
-        P = point_skel(T,f,mode=eval)
+        P = point_skel(T,f)
 
     P = remove_borders(P)
     P = downsample_3d(P,skel_dsample=downsample)
     print('Saving')
-    if os.path.splitext(out_tomo)[1] == '.mrc':
-        lio.write_mrc(P.astype(np.float32), out_tomo)
+    if os.path.splitext(in_tomo)[1] == '.mrc':
+        lio.write_mrc(P.astype(np.float32), os.path.splitext(in_tomo)[0]+'supred.mrc')
     else:
-        nrrd.write(out_tomo, P)
+        nrrd.write(os.path.splitext(in_tomo)[0]+'supred.nrrd', P)
     end = time.time()
     print ('The nms lasted ',str(end-sal_time),' s in execute')
     print('Successfully terminated. (' + time.strftime("%c") + ')')
