@@ -16,7 +16,20 @@ You can install tracET in two ways:
 
 
 ## Scripts
-There is four different scripts to apply different parts of the process:
+There is five different scripts to apply different parts of the process:
+
+### Saliency map:
+* Script description:
+  * The name of the script is get_saliency.py
+  * From a tomogram with a binary segmentation, calculates the saliency map, a distance transfromation of the input softed with a gaussian filter.
+  * This step is also included in the apply_nonmaxsup.py script.
+
+* Parameters:
+  * The parameter *in_tomo*, called with "-i" or "--itomo", needs the name of the input file. A binary map tomogram in a mrc format or nrrd format.
+  * The parameter *soomth_desviation*, called with "-s" or "-sdesv", is the desviation for gaussian filter and it should be ~1/3 of the element radium.
+
+* Outputs:
+  * A tomogram with the saliency map, in the same format of the input and with the same name with the sufix _*saliency*
 
 ### Non-Maximum Suppression:
 * Script description:
@@ -70,5 +83,21 @@ There is four different scripts to apply different parts of the process:
   * A mrc file with the points of the ribosomes labeled with the clusters they are part, with the same name of the input and the extension "*mode*_labeled.mrc".
   * A txt file, convertible to IMOD .mod file, with the information of the centroid of every cluster.
 
+### DICE METRIC
 
+* Script description:
+  * The name of the script is seg_skel_dice.py
+  * From two different binary segmentations, it calculates the TS, TP and DICE metric, and give the two skeletons of the inputs.
+
+* Parameters:
+  * the parameter *in_tomo*, called with "-i" or "--itomo", a tomogram with a binary segmentation, in mrc or nrrd format.
+  * The parameter *gt_tomo*, called with "-g" or "--igt" the ground truth segmentation, in mrc or nrrd format.
+  * The parameter *skel_mode*, called with "-m" or "--mode", is the structural mode for computing the skeleton: "s" for surfaces, "l" for lines and "b" for blobs.
+
+* Outputs:
+  * TS metric
+  * TP metric
+  * DICE metric
+  * (Optional) Asked with "-o" or "-otomo", skeleton of the input tomogram.
+  * (Optional) Asked with "-t" or "-ogt", skeleton of the ground truth tomogram.
 
