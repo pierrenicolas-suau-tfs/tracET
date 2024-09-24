@@ -83,6 +83,19 @@ There is five different scripts to apply different parts of the process:
   * A mrc file with the points of the ribosomes labeled with the clusters they are part, with the same name of the input and the extension "*mode*_labeled.mrc".
   * A txt file, convertible to IMOD .mod file, with the information of the centroid of every cluster.
 
+### Membrane clasification
+* Script description:
+  * The name of the script is membrane_poly.py
+  * From a point cloud of membranes, it cluster the points in the diferent membranes.
+
+* Parameters:
+  * The parameter *in_tomo*, called with "-i" or "--itomo", is the tomogram with the point cloud of the membrane segmentation, in mrc or nrrd format. (The output of the previous script).
+  * The parameter *distance_clustering*, called with "-d" or "--dist", is the distance of points to be part of the same cluster.
+  * The parameter *min_samples*, called with "-s" or "--samp", is the minimum samples needed to make a cluster. Is optional and if is not given, it takes value 2.
+
+* Outputs:
+  * A vtp file with the points of the membranes labeled with the clusters (diferent membranes) they are part, with the same name of the input and the extension ".vtp".
+
 ### DICE METRIC
 
 * Script description:

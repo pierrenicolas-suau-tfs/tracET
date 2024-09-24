@@ -3,12 +3,12 @@ import sys
 import time
 import nrrd
 import getopt
-
+import scipy
 import numpy as np
 
 from src.tracET.core import lio
-from src.tracET.core.skel import surface_skel, line_skel,point_skel
-from src.tracET.core.diff import prepare_input,remove_borders,downsample_3d
+
+from src.tracET.core.diff import prepare_input
 
 def main(argv):
     start=time.time()
@@ -63,9 +63,11 @@ def main(argv):
 
 
     P=prepare_input(T,sigma=s,bin=True,imf=None)
+    tomo_dsts = scipy.ndimage.morphology.distance_transform_edt(T)
     print('Saving')
     if os.path.splitext(in_tomo)[1] == '.mrc':
         lio.write_mrc(P.astype(np.float32), os.path.splitext(in_tomo)[0] + '_saliency.mrc')
+        lio.write_mrc(tomo_dsts.astype(np.float32), os.path.splitext(in_tomo)[0] + '_distance.mrc')
     else:
         nrrd.write(os.path.splitext(in_tomo)[0] + '_saliency.nrrd', P)
     sal_time=time.time()

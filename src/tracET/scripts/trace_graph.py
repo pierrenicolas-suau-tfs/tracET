@@ -4,18 +4,19 @@ from src.tracET.core.vtk_uts import *
 from src.tracET.core import lio
 from src.tracET.representation.graphs import *
 from src.tracET.representation.curve import *
+
 #import nrrd
 import pandas as pd
 
 def main(argv):
     start = time.time()
-
     #Input parsing
     in_tomo = None
     r, s = None, None
-    t,b=None,None
+    t,grade=None,None
+
     try:
-        opts, args = getopt.getopt(argv, "hi:r:s:t:b:",["help","itomo","rad","subsam","type","branch"])
+        opts, args = getopt.getopt(argv, "hi:r:s:t:g:",["help","itomo","rad","subsam","type","grade"])
     except getopt.GetoptError:
         print('python trace_graph.py -i <in_tomo> -r <radius> -s <subsampling> -o <out_dir>')
         sys.exit()
@@ -26,7 +27,7 @@ def main(argv):
             print('\t-r (--rad) <radius> radius to connect points in the graph')
             print('\t-s (--subsam) <subsampling> radius of subsampling (optional, default no subsampling)')
             print('\t-t (--type) <type of filament> "l" (linear) or "n" (net) (optional, default net)')
-            print('\t-b (--branch) <branch grade> times we repeat the branch removal for branches with more than one edge. (optional, default 1. Only for linear)')
+            print('\t-g (--grade) <grade> grade of the polynomial aproximation. (optional, default 5.)')
         elif opt in ("-i","--itomo"):
             in_tomo=arg
             if not(os.path.splitext(in_tomo)[1] in ('.mrc', '.nhdr', '.nrrd')):
@@ -38,8 +39,8 @@ def main(argv):
             s=arg
         elif opt in ("-t","--type"):
             t=arg
-        elif opt in ("-b","--branch"):
-            b=arg
+        elif opt in ("-g","--grade"):
+            grade=arg
 
     if in_tomo is not None:
         print('\t-Loading input tomogram:', in_tomo)
@@ -67,11 +68,11 @@ def main(argv):
     else:
         t='n'
         print('Default: net filament')
-    if b is not None:
-        print('Branch grade = ',str(b))
+    if grade is not None:
+        print('Grade grade = ',str(grade))
     else:
-        b=1
-        print('Default: branches grade one')
+        grade=5
+        print('Default: polynomial grade 5')
 
 
     print('Calculating the graph')
@@ -85,20 +86,22 @@ def main(argv):
     b=0
     a=0
     out_poly = vtk.vtkPolyData()
+    aprox_out_poly = vtk.vtkPolyData()
     #append_comps = vtk.vtkAppendPolyData()
     for i in range(len(graph_ar_comps)):
         print('Procesing tubule ',str(i))
 
         print('Removing cycles')
-        L_graph=spannig_tree_apply(graph_ar_comps[i])
+        L_graph=spannig_tree_apply(graph_ar_comps[i],coords_comps[i])
 
-        if t=='l':
+        if t =='l':
             print('For a linear filament, we remove the shortest branches')
             L_coords = coords_comps[i]
-            for number in range(int(b)):
-                L_graph,L_coords=remove_branches(L_graph,L_coords)
-                L_branches=np.ones((len(L_coords)))
-                print(number)
+            L_graph, L_coords = only_long_path(L_graph,L_coords)
+            #for number in range(int(b)):
+                #L_graph,L_coords=remove_branches(L_graph,L_coords)
+            L_branches=np.ones((len(L_coords)))
+                #print(number)
         else:
             print('For a net, we leave the branches')
             L_graph,L_coords,L_branches=label_branches2(L_graph,coords_comps[i])
@@ -110,12 +113,19 @@ def main(argv):
             print('Processing branch '+str(j))
             if len(coords_branchs[j])>1:
                 sorted_coords=sort_branches(graphs_branch[j],coords_branchs[j])
+
+                aprox_coords = aproximate_curve(sorted_coords, 1000, grade=grade)
                 curve = SpaceCurve(sorted_coords)
+                aprox_curve= SpaceCurve(aprox_coords)
                 curve_poly = curve.get_vtp()
+                aprox_poly = aprox_curve.get_vtp()
                 add_label_to_poly(curve_poly, i, 'Component')
                 add_label_to_poly(curve_poly, j, 'Branch')
+                add_label_to_poly(aprox_poly, i, 'Component')
+                add_label_to_poly(aprox_poly, j, 'Branch')
 
                 out_poly = merge_polys(out_poly, curve_poly)
+                aprox_out_poly = merge_polys(aprox_out_poly,aprox_poly)
             try:
                 branch_list[b:b + len(coords_branchs[j])] = j * np.ones(len(coords_branchs[j]))
 
@@ -136,7 +146,9 @@ def main(argv):
     out_pd.to_csv(os.path.splitext(in_tomo)[0]+ '_skel_graph.csv')
 
     save_vtp(out_poly, os.path.splitext(in_tomo)[0] + '_skel_graph.vtp')
+    save_vtp(aprox_out_poly, os.path.splitext(in_tomo)[0] + '_soft_graph.vtp')
     end = time.time()
+
     print('The program lasted ', str(end - start), ' s in execute')
     print('Successfully terminated. (' + time.strftime("%c") + ')')
 

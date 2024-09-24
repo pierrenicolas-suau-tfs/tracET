@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch
 from skimage.morphology import skeletonize_3d
 import networkx as nx
+import pandas as pd
 
 #Create subsample and skeletonize a graph
 def make_graph(T:np.ndarray,r:float)->tuple:
@@ -58,7 +59,10 @@ def make_skeleton_graph(T:np.ndarray,r:float,subsample=0)->tuple:
 def add_coords_to_graph(G,coords):
     for i,node in enumerate(G.nodes()):
         G.nodes[node]['Coords'] = coords[i]
-
+def cal_edges_weights(G,coords):
+    add_coords_to_graph(G,coords)
+    for edge in enumerate(G.edges()):
+        G[edge[1][0]][edge[1][1]]['weight']= np.linalg.norm(G.nodes[edge[1][0]]['Coords']-G.nodes[edge[1][1]]['Coords'])
 ##Split in components
 def split_into_components(sparse_matrix,node_coordinates):
     """
@@ -86,13 +90,14 @@ def split_into_components(sparse_matrix,node_coordinates):
     return component_matrices,component_coordinates
 
 #Remove cycles
-def spannig_tree_apply(sparse_graph):
+def spannig_tree_apply(sparse_graph,coords):
     """
     Compute the minimum spanning tree:, the smallest acyclic subgraph that conect all the nodes
     :param sparse_graph: Sparse matrix with the graph information
     :return: Sparse matrix with the acyclic graph information
     """
     graph = nx.from_scipy_sparse_array(sparse_graph)
+    cal_edges_weights(graph,coords)
     graph_no_cycles=nx.minimum_spanning_tree(graph)
     return nx.to_scipy_sparse_array(graph_no_cycles)
 
@@ -248,5 +253,18 @@ def sort_branches(branch_graph, branch_coord):
     sorted_coords=[graph.nodes[node]['Coords']for node in order]
     return np.array(sorted_coords)
 
-
-
+def only_long_path(graph, coords):
+    graph = nx.from_scipy_sparse_array(graph)
+    cal_edges_weights(graph, coords)
+    length = pd.DataFrame(dict(nx.all_pairs_dijkstra_path_length(graph)))
+    extremes = [min(length.idxmax(axis=0)),max(length.idxmax(axis=0))]
+    path = nx.shortest_path(graph,source = extremes[0], target = extremes[1], weight = 'weight')
+    #clean_graph = graph.subgraph(path)
+    clean_graph = nx.Graph()
+    for i in path:
+        clean_graph.add_node(i)
+    for i in range(len(path)-1):
+        clean_graph.add_edge(path[i],path[i+1])
+    clean_coords = [graph.nodes[node]['Coords']for node in path]
+    claen_sparse_graph = nx.to_scipy_sparse_array(clean_graph)
+    return claen_sparse_graph, clean_coords

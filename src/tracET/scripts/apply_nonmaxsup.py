@@ -3,7 +3,6 @@ import sys
 import time
 import nrrd
 import getopt
-
 import numpy as np
 
 from src.tracET.core import lio
@@ -118,7 +117,7 @@ def main(argv):
     P = downsample_3d(P,skel_dsample=downsample)
     print('Saving')
     if os.path.splitext(in_tomo)[1] == '.mrc':
-        lio.write_mrc(P.astype(np.float32), os.path.splitext(in_tomo)[0]+'supred.mrc')
+        lio.write_mrc(P.astype(np.float32), os.path.splitext(in_tomo)[0]+'_supred_time.mrc')
     else:
         nrrd.write(os.path.splitext(in_tomo)[0]+'supred.nrrd', P)
     end = time.time()

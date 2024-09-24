@@ -5,7 +5,6 @@ from src.tracET.representation.clustering import *
 from src.tracET.core.vtk_uts import *
 import pandas as pd
 
-in_tomo = '/project/chiem/pelayo/neural_network/nonmaxsup_outputs/podosome/ribosomes/bin/tomo_001_ribo_supred_croped.mrc'
 
 def main(argv):
     start = time.time()
@@ -35,6 +34,7 @@ def main(argv):
             mode= arg
             if not mode in ('Affinity','MeanShift'):
                 print('Mode should be "Affinity" or "MeanShift".')
+                sys.exit()
         elif opt in ("-b","--blob_d"):
             blob_size=arg
         elif opt in ("-n","--n_jobs"):

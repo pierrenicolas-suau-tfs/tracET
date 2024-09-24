@@ -10,6 +10,7 @@ __author__ = 'martinez'
 import vtk
 import math
 import numpy as np
+from scipy import interpolate
 #from pyseg.globals.utils import angle_2vec_3D, closest_points
 
 ###### Global variables
@@ -52,6 +53,23 @@ def closest_points(point, points, nn=1):
         out_points[i] = points[n_ids[i], :]
     return out_points
 
+def aproximate_curve(coords, n_points, grade = 5):
+    t = np.linspace(0,n_points,num=len(coords))
+    weights = np.ones_like(t)
+    weights[0] = 1e6
+    weights[-1] = 1e6
+    x_fun = np.polyfit(t, coords[:, 0], grade, w=weights)
+    y_fun = np.polyfit(t, coords[:, 1], grade, w=weights)
+    z_fun = np.polyfit(t, coords[:, 2], grade, w=weights)
+    t_sample = np.arange(n_points)
+    x_sample = np.polyval(x_fun,t_sample)
+    y_sample = np.polyval(y_fun,t_sample)
+    z_sample = np.polyval(z_fun,t_sample)
+    coords_out = np.zeros((n_points,3))
+    coords_out[:, 0] = x_sample
+    coords_out[:, 1] = y_sample
+    coords_out[:, 2] = z_sample
+    return coords_out
 
 
 # ####################################################################################################
