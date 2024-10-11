@@ -6,3 +6,4 @@ vtk
 networkx
 open3d
 scikit-learn
+scikit-image

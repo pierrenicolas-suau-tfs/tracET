@@ -1,12 +1,13 @@
 import sys, os, getopt, time
-#import nrrd
-from src.tracET.core import lio
-from src.tracET.representation.clustering import *
-from src.tracET.core.vtk_uts import *
+import nrrd
+from tracET.core import lio
+from tracET.core.vtk_uts import *
+from tracET.representation.clustering import *
 import pandas as pd
 
 
-def main(argv):
+def main():
+    argv=sys.argv[1:]
     start = time.time()
 
     #Input parsing
@@ -76,7 +77,7 @@ def main(argv):
 
 
     save_vtp(out_poly, os.path.splitext(in_tomo)[0]+'_'+mode+'_labeled.vtp')
-    lio.write_mrc(out_T.astype(np.float32), os.path.splitext(in_tomo)[0]+'_'+mode+'_labeled.mrc')
+    lio.write_mrc(out_T.astype(np.float32), os.path.splitext(in_tomo)[0] + '_' + mode + '_labeled.mrc')
 
     mod_file_df=pd.DataFrame({'object': np.ones(len(centers[:,0])).astype(np.int32),'contourns':np.arange(len(centers[:,0]))+1,'X': centers[:,0].astype(np.int32),'Y': centers[:,1].astype(np.int32),'Z': centers[:,2].astype(np.int32)})
 
@@ -86,5 +87,5 @@ def main(argv):
     print('Successfully terminated. (' + time.strftime("%c") + ')')
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
 

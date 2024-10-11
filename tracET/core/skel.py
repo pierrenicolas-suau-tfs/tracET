@@ -1,6 +1,6 @@
 
 import numpy as np
-from src.tracET.core.diff import diff3d, nonmaxsup_surf, nonmaxsup_line, nonmaxsup_point, angauss
+from tracET.core.diff import diff3d, nonmaxsup_surf, nonmaxsup_line, nonmaxsup_point
 from supression import desyevv
 
 

@@ -19,13 +19,13 @@ Script for computing the skeleton DICE to measure overlapping between two segmen
 import os
 import sys
 import time
-#import nrrd
+import nrrd
 import getopt
 
 import numpy as np
 
-from src.tracET.core import lio
-from src.tracET.metrics.dice2 import cs_dice, cl_dice, pt_dice
+from tracET.core import lio
+from tracET.metrics.dice2 import cs_dice, cl_dice, pt_dice
 
 
 def print_help_msg():
@@ -44,7 +44,8 @@ def print_help_msg():
     print('\t-F (--tfilt)  <ifilter> filter for the mask for the ground truth tomogram.(optional, default 1)')
 
 
-def main(argv):
+def main():
+    argv = sys.argv[1:]
     start = time.time()
     # Input parsing
     in_tomo, in_tomo_gt = None, None
@@ -174,4 +175,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

@@ -1,7 +1,7 @@
 import scipy
 import numpy as np
-from src.tracET.core.skel import surface_skel,line_skel,point_skel
-from src.tracET.core.diff import prepare_input
+from tracET.core.skel import surface_skel,line_skel,point_skel
+from tracET.core.diff import prepare_input
 
 
 

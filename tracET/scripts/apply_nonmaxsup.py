@@ -5,11 +5,13 @@ import nrrd
 import getopt
 import numpy as np
 
-from src.tracET.core import lio
-from src.tracET.core.skel import surface_skel, line_skel,point_skel
-from src.tracET.core.diff import prepare_input,remove_borders,downsample_3d
+from tracET.core import lio
+from tracET.core.skel import surface_skel, line_skel,point_skel
+from tracET.core.diff import prepare_input,remove_borders,downsample_3d
 
-def main(argv):
+def main():
+    argv = sys.argv[1:]
+
     start=time.time()
     # Input parsing
     in_tomo,s=None,None
@@ -117,7 +119,7 @@ def main(argv):
     P = downsample_3d(P,skel_dsample=downsample)
     print('Saving')
     if os.path.splitext(in_tomo)[1] == '.mrc':
-        lio.write_mrc(P.astype(np.float32), os.path.splitext(in_tomo)[0]+'_supred_time.mrc')
+        lio.write_mrc(P.astype(np.float32), os.path.splitext(in_tomo)[0] + '_supred.mrc')
     else:
         nrrd.write(os.path.splitext(in_tomo)[0]+'supred.nrrd', P)
     end = time.time()
@@ -126,5 +128,5 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
 

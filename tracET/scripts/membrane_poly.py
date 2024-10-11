@@ -1,23 +1,15 @@
-import sys, os, getopt, time
-from src.tracET.core.vtk_uts import *
-from src.tracET.core import lio
-from src.tracET.representation.graphs import *
-from src.tracET.representation.curve import *
-import tracemalloc
-#import nrrd
-import pandas as pd
+import sys, getopt, time
+from tracET.core.vtk_uts import *
+from tracET.core import lio
+from tracET.representation.graphs import *
+import nrrd
 
 from sklearn.cluster import DBSCAN
-import open3d as o3d
 
 
 
-
-#tomo = '/project/chiem/pelayo/neural_network/nonmaxsup_outputs/tomo_jenny/lam8/membrane/tomo01_lam8_deconv_crop_seg_membrane_supred_time.mrc'
-#epsilon = 10
-#min_samples = 2
-
-def main(argv):
+def main():
+    argv = sys.argv[1:]
     start = time.time()
     tomo = None
     epsilon = None
@@ -100,4 +92,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

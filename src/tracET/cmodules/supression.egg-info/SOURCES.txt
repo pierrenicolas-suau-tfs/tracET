@@ -1,6 +1,0 @@
-setup.py
-supressionmodule.c
-supression.egg-info/PKG-INFO
-supression.egg-info/SOURCES.txt
-supression.egg-info/dependency_links.txt
-supression.egg-info/top_level.txt

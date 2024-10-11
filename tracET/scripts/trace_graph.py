@@ -1,14 +1,15 @@
 
-import sys, os, getopt, time
-from src.tracET.core.vtk_uts import *
-from src.tracET.core import lio
-from src.tracET.representation.graphs import *
-from src.tracET.representation.curve import *
+import sys, getopt, time
+from tracET.core.vtk_uts import *
+from tracET.core import lio
+from tracET.representation.graphs import *
+from tracET.representation.curve import *
 
-#import nrrd
+import nrrd
 import pandas as pd
 
-def main(argv):
+def main():
+    argv = sys.argv[1:]
     start = time.time()
     #Input parsing
     in_tomo = None
@@ -153,4 +154,4 @@ def main(argv):
     print('Successfully terminated. (' + time.strftime("%c") + ')')
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

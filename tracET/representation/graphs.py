@@ -1,9 +1,9 @@
 import os
 import numpy as np
 import sklearn.neighbors
-from sklearn.neighbors import NearestNeighbors
-import torch.nn.functional as F
-import torch
+#from sklearn.neighbors import NearestNeighbors
+#import torch.nn.functional as F
+#import torch
 from skimage.morphology import skeletonize_3d
 import networkx as nx
 import pandas as pd

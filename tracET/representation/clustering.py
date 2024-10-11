@@ -1,6 +1,5 @@
-import numpy as np
 from sklearn.cluster import MeanShift, AffinityPropagation
-from src.tracET.core.vtk_uts import *
+from tracET.core.vtk_uts import *
 
 def get_coords_from_pc(T):
     """

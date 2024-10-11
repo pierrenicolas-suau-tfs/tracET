@@ -6,11 +6,12 @@ import getopt
 import scipy
 import numpy as np
 
-from src.tracET.core import lio
+from tracET.core import lio
 
-from src.tracET.core.diff import prepare_input
+from tracET.core.diff import prepare_input
 
-def main(argv):
+def main():
+    argv = sys.argv[1:]
     start=time.time()
     # Input parsing
     in_tomo,s=None,None
@@ -77,4 +78,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
