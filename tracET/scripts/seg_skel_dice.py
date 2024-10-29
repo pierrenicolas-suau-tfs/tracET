@@ -41,7 +41,7 @@ def print_help_msg():
     print('\t-t (--ogt) <out_gt_skel> (optional) path to store the skeleton generated of the ground truth')
     print('\t-d (--dil) <dilaton> (optional) number of iterations to pre-dilate (make thicker) the input segmantations')
     print('\t-f (--ifilt)  <ifilter> filter for the mask for the input tomogram. (optional, default 1)')
-    print('\t-F (--tfilt)  <ifilter> filter for the mask for the ground truth tomogram.(optional, default 1)')
+    print('\t-F (--tfilt)  <gtfilter> filter for the mask for the ground truth tomogram.(optional, default 1)')
 
 
 def main():
@@ -52,11 +52,10 @@ def main():
     skel_mode = None
     out_tomo_skel, out_tomo_gt_skel = None, None
     it_dil = None
-    ibin, tbin = None, None
     ifilt, tfilt= None, None
     try:
-        opts, args = getopt.getopt(argv, "hi:g:m:o:t:d:b:B:f:F:",["help", "itomo", "igt", "mode", "otomo",
-                                                                           "ogt", "dil", "ibin", "tbin", "ifilt", "tfilt"])
+        opts, args = getopt.getopt(argv, "hi:g:m:o:t:d:f:F:",["help", "itomo", "igt", "mode", "otomo",
+                                                                           "ogt", "dil", "ifilt", "tfilt"])
     except getopt.GetoptError:
         print_help_msg()
         sys.exit()
@@ -93,10 +92,7 @@ def main():
             if it_dil >= 0:
                 print('The number of iterations for dilation must be greater or equal to zero!')
                 sys.exit()
-        elif opt in ("-b", "--ibin"):
-            ibin = bool(eval(arg))
-        elif opt in ("-B", "--tbin"):
-            tbin = bool(eval(arg))
+
         elif opt in ("-f", "--ifilt"):
             ifilt = eval(arg)
         elif opt in ("-F", "--tfilt"):
@@ -133,19 +129,19 @@ def main():
     if it_dil is None:
         it_dil=0
 
-    if ibin is None:
-        ibin=True
-    if tbin is None:
-        tbin=True
+    if ifilt is None:
+        ifilt=0.065
+    if tfilt is None:
+        tfilt=0.065
 
 
     # Compute the appropriate metric
     if skel_mode == 's':
-        results = cs_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_imf=ifilt, tomo_gt_bin=tbin, gt_imf=tfilt)
+        results = cs_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=True, tomo_imf=ifilt, tomo_gt_bin=True, gt_imf=tfilt)
     elif skel_mode == 'l':
-        results = cl_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_imf=ifilt, tomo_gt_bin=tbin, gt_imf=tfilt)
+        results = cl_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=True, tomo_imf=ifilt, tomo_gt_bin=True, gt_imf=tfilt)
     elif skel_mode == 'b':
-        results = pt_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=ibin, tomo_imf=ifilt, tomo_gt_bin=tbin, gt_imf=tfilt)
+        results = pt_dice(tomo, tomo_gt, dilation=it_dil, tomo_bin=True, tomo_imf=ifilt, tomo_gt_bin=True, gt_imf=tfilt)
     else:
         print('Mode \'' + skel_mode + '\' not implemented!')
 
