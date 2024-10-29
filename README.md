@@ -5,16 +5,16 @@
 * Python with the packages listed in the document [requirements.txt](https://github.com/PelayoAlvarezBrecht/tracer/tree/pypi/requirements.txt)
 * Ensure all of them are installed before installing the package. **This package does not install them automatically**.
 
-## Instalation
+## Installation
 You can install tracET in two ways:
 * From PyPI (recommended):
   * In a python terminal, write
 ```commandline
-pip install -i https://test.pypi.org/simple/ tracET
+pip install https://test.pypi.org/simple/ tracET
 ```
   * If it desnt work, try:
 ```commandline
-pip install -i https://test.pypi.org/simple/ tracET --no-build-isolation
+pip install https://test.pypi.org/simple/ tracET --no-build-isolation
 ```
   * If is not do it automatically, add this line to your bashrc to add the scripts as commands:
 ```commandline
@@ -126,10 +126,12 @@ seg_skel_dice - options
   * From two different binary segmentations, it calculates the TS, TP and DICE metric, and give the two skeletons of the inputs.
 
 * Parameters:
-  * the parameter **in_tomo**, called with `-i` or `--itomo`, a tomogram with a binary segmentation, in *mrc* or *nrrd* format.
-  * The parameter **gt_tomo**, called with `-g` or `--igt` the ground truth segmentation, in *mrc* or *nrrd* format.
+  * the parameter **in_tomo**, called with `-i` or `--itomo`, is the input, a tomogram with a binary segmentation, in *mrc* or *nrrd* format.
+  * The parameter **gt_tomo**, called with `-g` or `--igt` is the ground truth segmentation, a binary tomogram in *mrc* or *nrrd* format.
   * The parameter **skel_mode**, called with `-m` or `--mode`, is the structural mode for computing the skeleton: `s` for surfaces, `l` for lines and `b` for blobs.
-
+  * The parameter **dilation**, called with `-d` or `--dil`, is the numbers of iterations to make a pre-dilation (to make thicker the segmentations). Is optional, and if is not given, it wll not do any dilation.
+  * The parameter **ifilter**, called with `-f` or `--ifilt`, is the filter threshold for the mask to apply the non-maximum suppression to the input tomogram. Is optional and in by default is fixed in 0.065. You can put less if is too strong.
+  * The parameter **gtfilter**, called with `-F` or `--tfilt`, is the filter threshold for the mask to apply the non-maximum suppression to the ground truth tomogram. Is optional and in by default is fixed in 0.065. You can put less if is too strong.
 * Outputs:
   * **TS metric** value.
   * **TP metric** value.
